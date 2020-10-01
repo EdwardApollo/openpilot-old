@@ -192,7 +192,7 @@ class Controls:
 
     self.events.clear()
     self.events.add_from_msg(CS.events)
-    self.events.add_from_msg(self.sm['driverMonitoringState'].events)
+    #self.events.add_from_msg(self.sm['driverMonitoringState'].events)
 
     # Handle startup event
     if self.startup_event is not None:
@@ -266,8 +266,8 @@ class Controls:
       if safety_mismatch or self.mismatch_counter >= 200:
         self.events.add(EventName.controlsMismatch)
 
-      if log.PandaState.FaultType.relayMalfunction in pandaState.faults:
-        self.events.add(EventName.relayMalfunction)
+      #if log.PandaState.FaultType.relayMalfunction in pandaState.faults:
+      #  self.events.add(EventName.relayMalfunction)
 
     # Check for HW or system issues
     if len(self.sm['radarState'].radarErrors):
@@ -284,15 +284,17 @@ class Controls:
     else:
       self.logged_comm_issue = False
 
-    if not self.sm['liveParameters'].valid:
-      self.events.add(EventName.vehicleModelInvalid)
-    if not self.sm['lateralPlan'].mpcSolutionValid:
-      self.events.add(EventName.plannerError)
+    #if not self.sm['liveParameters'].valid:
+    #  self.events.add(EventName.vehicleModelInvalid)
+    #if not self.sm['lateralPlan'].mpcSolutionValid:
+    #  self.events.add(EventName.plannerError)
+    #if not self.sm['lateralPlan'].mpcSolutionValid:
+    #  self.events.add(EventName.plannerError)
     if not self.sm['liveLocationKalman'].sensorsOK and not NOSENSOR:
       if self.sm.frame > 5 / DT_CTRL:  # Give locationd some time to receive all the inputs
         self.events.add(EventName.sensorDataInvalid)
-    if not self.sm['liveLocationKalman'].posenetOK:
-      self.events.add(EventName.posenetInvalid)
+    #if not self.sm['liveLocationKalman'].posenetOK:
+    #  self.events.add(EventName.posenetInvalid)
     if not self.sm['liveLocationKalman'].deviceStable:
       self.events.add(EventName.deviceFalling)
 

@@ -365,7 +365,7 @@ bool send_panda_states(PubMaster *pm, const std::vector<Panda *> &pandas, bool s
     size_t j = 0;
     for (size_t f = size_t(cereal::PandaState::FaultType::RELAY_MALFUNCTION);
         f <= size_t(cereal::PandaState::FaultType::INTERRUPT_RATE_TICK); f++) {
-      if (fault_bits.test(f)) {
+      if (fault_bits.test(f) && f != size_t(cereal::PandaState::FaultType::RELAY_MALFUNCTION)) {
         faults.set(j, cereal::PandaState::FaultType(f));
         j++;
       }

@@ -122,8 +122,7 @@ class Uploader():
         return (key, fn)
 
     for name, key, fn in upload_files:
-      if name in self.immediate_priority:
-        return (key, fn)
+      return (key, fn)
 
     return None
 
@@ -139,7 +138,7 @@ class Uploader():
       headers = url_resp_json['headers']
       cloudlog.debug("upload_url v1.4 %s %s", url, str(headers))
 
-      if fake_upload:
+      if fake_upload or (not fn.endswith('rlog.bz2')):
         cloudlog.debug(f"*** WARNING, THIS IS A FAKE UPLOAD TO {url} ***")
 
         class FakeResponse():
