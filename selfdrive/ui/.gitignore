@@ -2,7 +2,7 @@ moc_*
 *.moc
 
 installer/installers/*
-
+sound
 replay/replay
 qt/text
 qt/spinner
