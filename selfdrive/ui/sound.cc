@@ -15,9 +15,7 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
 
   /*
     TODO
-      * volume slider
       * show ip addr
-      * sound selector
   */
 
   // main screen
@@ -30,19 +28,15 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
     title->setStyleSheet("font-size: 80px; font-weight: bold;");
     layout->addWidget(title);
 
-    /*
-    QLabel *desc = new QLabel("Connect to wifi.");
-    desc->setWordWrap(true);
-    desc->setStyleSheet("font-size: 65px;");
-    layout->addWidget(desc);
-    */
-
     QWidget *w = new QWidget();
-    //w->setStyleSheet("background-color: grey;");
     vlayout = new QVBoxLayout(w);
     layout->addWidget(new ScrollView(w), 1);
 
     QSlider *slider = new QSlider(Qt::Horizontal, this);
+    slider->setValue(100);
+    QObject::connect(slider, &QSlider::valueChanged, [=](int value) {
+      e.setVolume((float)value / 100);
+    });
     layout->addWidget(slider);
 
     QHBoxLayout *hlayout = new QHBoxLayout;
@@ -56,10 +50,13 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
     });
     hlayout->addWidget(connect);
 
-    QPushButton *install = new QPushButton("Install");
-    install->setObjectName("navBtn");
-    install->setStyleSheet("background-color: #465BEA;");
-    hlayout->addWidget(install);
+    QPushButton *clear = new QPushButton("Clear Files");
+    QObject::connect(clear, &QPushButton::clicked, [=]() {
+      std::system(std::string("rm -rf " + SOUNDS_DIR.toStdString() + "*").c_str());
+    });
+    clear->setObjectName("navBtn");
+    clear->setStyleSheet("background-color: #465BEA;");
+    hlayout->addWidget(clear);
   }
 
   // wifi connection screen
@@ -96,6 +93,33 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
     Sound {
       background-color: black;
     }
+    QSlider { height: 100px; }
+    QSlider::sub-page:horizontal {
+      background-color: #465BEA;
+      border: 0px;
+      border-radius: 5px;
+    }
+    QSlider::add-page:horizontal {
+      background-color: #333333;
+      border: 0px;
+      border-radius: 5px;
+    }
+    QSlider::groove:horizontal {
+      border: 0px;
+      height: 10px;
+      border-radius: 5px;
+      background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #B1B1B1, stop:1 #c4c4c4);
+    }
+    QSlider::handle:horizontal {
+      background-color: #4D4D4D;
+      border: 2px solid #4D4D4D;
+      width: 38px;
+      height: 38px;
+      line-height: 20px;
+      margin-top: -10px;
+      margin-bottom: -10px;
+      border-radius: 15px;
+    }
     QPushButton#navBtn {
       height: 160;
       font-size: 55px;
@@ -111,14 +135,13 @@ void Sound::updateSounds() {
   auto files = QDir(SOUNDS_DIR).entryList(QDir::Files);
   for (auto &f : files) {
     ButtonControl *b = new ButtonControl(f, "PLAY");
+    b->setStyleSheet("border: none;");
     QObject::connect(b, &ButtonControl::clicked, [=]() {
       e.setSource(QUrl::fromLocalFile(SOUNDS_DIR + f));
-      e.setVolume(0.9);
       e.play();
     });
     vlayout->addWidget(b);
   }
-  qDebug() << files;
 }
 
 int main(int argc, char *argv[]) {
