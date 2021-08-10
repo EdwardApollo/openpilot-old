@@ -107,12 +107,12 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
     QSlider::handle:horizontal {
       background-color: #4D4D4D;
       border: 2px solid #4D4D4D;
-      width: 38px;
-      height: 38px;
+      width: 55px;
+      height: 50px;
       line-height: 20px;
-      margin-top: -10px;
-      margin-bottom: -10px;
-      border-radius: 15px;
+      margin-top: -25px;
+      margin-bottom: -25px;
+      border-radius: 28px;
     }
     QPushButton#navBtn {
       height: 160;
@@ -137,12 +137,12 @@ void Sound::updateSounds() {
     vlayout->addWidget(b);
   }
 
-  // update ip
   if (n->wifi->ipv4_address.size()) {
-    title->setText(QString("Sound tester (%1)").arg(n->wifi->ipv4_address));
+    title->setText(QString("Sound tester - %1").arg(n->wifi->ipv4_address));
   } else {
     title->setText("Sound tester");
   }
+  update();
 }
 
 int main(int argc, char *argv[]) {
