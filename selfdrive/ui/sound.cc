@@ -7,16 +7,10 @@
 #include "selfdrive/ui/qt/util.h"
 #include "selfdrive/ui/qt/qt_window.h"
 #include "selfdrive/ui/qt/widgets/scrollview.h"
-#include "selfdrive/ui/qt/offroad/networking.h"
 
 const QString SOUNDS_DIR = "/data/openpilot/selfdrive/assets/sounds/";
 
 Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
-
-  /*
-    TODO
-      * show ip addr
-  */
 
   // main screen
   main = new QWidget;
@@ -24,7 +18,7 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
     QVBoxLayout *layout = new QVBoxLayout(main);
     layout->setContentsMargins(100, 100, 100, 100);
 
-    QLabel *title = new QLabel("Sound tester");
+    title = new QLabel("Sound tester");
     title->setStyleSheet("font-size: 80px; font-weight: bold;");
     layout->addWidget(title);
 
@@ -65,9 +59,9 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
     QVBoxLayout *layout = new QVBoxLayout(wifi);
     layout->setContentsMargins(100, 100, 100, 100);
 
-    Networking *networking = new Networking(this, false);
-    networking->setStyleSheet("Networking { background-color: #292929; border-radius: 13px; }");
-    layout->addWidget(networking, 1);
+    n = new Networking(this, false);
+    n->setStyleSheet("Networking { background-color: #292929; border-radius: 13px; }");
+    layout->addWidget(n, 1);
 
     QPushButton *back = new QPushButton("Back");
     back->setObjectName("navBtn");
@@ -141,6 +135,13 @@ void Sound::updateSounds() {
       e.play();
     });
     vlayout->addWidget(b);
+  }
+
+  // update ip
+  if (n->wifi->ipv4_address.size()) {
+    title->setText(QString("Sound tester (%1)").arg(n->wifi->ipv4_address));
+  } else {
+    title->setText("Sound tester");
   }
 }
 
