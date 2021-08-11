@@ -1,3 +1,9 @@
+#include <sys/types.h>
+#include <ifaddrs.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include <QDebug>
 #include <QTimer>
 #include <QSoundEffect>
@@ -7,12 +13,13 @@
 #include "selfdrive/ui/qt/util.h"
 #include "selfdrive/ui/qt/qt_window.h"
 #include "selfdrive/ui/qt/widgets/scrollview.h"
+#include "selfdrive/ui/qt/widgets/controls.h"
 
 #ifndef QCOM
 #include "selfdrive/ui/qt/offroad/networking.h"
 #endif
 
-const QString SOUNDS_DIR = "/data/openpilot/selfdrive/assets/sounds/";
+#define SOUNDS_DIR "/data/openpilot/selfdrive/assets/sounds/"
 
 
 char* find_wlan0_ip() {
@@ -35,7 +42,6 @@ char* find_wlan0_ip() {
 
 
 Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
-
   // main screen
   main = new QWidget;
   {
@@ -64,13 +70,17 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
     QPushButton *connect = new QPushButton("Connect to WiFi");
     connect->setObjectName("navBtn");
     QObject::connect(connect, &QPushButton::clicked, [=]() {
+#ifndef QCOM
       setCurrentWidget(wifi);
+#else
+      HardwareEon::launch_wifi();
+#endif
     });
     hlayout->addWidget(connect);
 
     QPushButton *clear = new QPushButton("Clear Files");
     QObject::connect(clear, &QPushButton::clicked, [=]() {
-      std::system(std::string("rm -rf " + SOUNDS_DIR.toStdString() + "*").c_str());
+      std::system(std::string("rm -rf " SOUNDS_DIR "*").c_str());
     });
     clear->setObjectName("navBtn");
     clear->setStyleSheet("background-color: #465BEA;");
@@ -101,6 +111,11 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
   addWidget(main);
   addWidget(wifi);
 
+  // cleanup
+  std::system("rm -rf " SOUNDS_DIR "*");
+  std::system("cd " SOUNDS_DIR " && git checkout .");
+  std::system("mkdir -p " SOUNDS_DIR);
+
   QTimer *t = new QTimer(this);
   QObject::connect(t, &QTimer::timeout, this, &Sound::updateSounds);
   t->start(1000);
@@ -108,6 +123,7 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
   setStyleSheet(R"(
     * {
       color: white;
+      outline: none;
       font-family: Inter;
     }
     Sound {
