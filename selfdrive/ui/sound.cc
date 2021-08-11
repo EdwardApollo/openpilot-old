@@ -8,7 +8,31 @@
 #include "selfdrive/ui/qt/qt_window.h"
 #include "selfdrive/ui/qt/widgets/scrollview.h"
 
+#ifndef QCOM
+#include "selfdrive/ui/qt/offroad/networking.h"
+#endif
+
 const QString SOUNDS_DIR = "/data/openpilot/selfdrive/assets/sounds/";
+
+
+char* find_wlan0_ip() {
+  char *addr = nullptr;
+  struct ifaddrs *id_head, *id;
+  getifaddrs(&id_head);
+  id = id_head;
+
+  do {
+    if(id->ifa_addr && id->ifa_addr->sa_family == AF_INET){
+      if(strcmp(id->ifa_name, "wlan0") == 0){
+        addr = inet_ntoa(((struct sockaddr_in *) id->ifa_addr)->sin_addr);
+      }
+    }
+    id = id->ifa_next;
+  } while(id->ifa_next != NULL);
+  freeifaddrs(id_head);
+  return addr;
+}
+
 
 Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
 
@@ -59,9 +83,11 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
     QVBoxLayout *layout = new QVBoxLayout(wifi);
     layout->setContentsMargins(100, 100, 100, 100);
 
-    n = new Networking(this, false);
+#ifndef QCOM
+    Networking *n = new Networking(this, false);
     n->setStyleSheet("Networking { background-color: #292929; border-radius: 13px; }");
     layout->addWidget(n, 1);
+#endif
 
     QPushButton *back = new QPushButton("Back");
     back->setObjectName("navBtn");
@@ -138,8 +164,9 @@ void Sound::updateSounds() {
   }
   vlayout->addStretch();
 
-  if (n->wifi->ipv4_address.size()) {
-    title->setText(QString("Sound tester - %1").arg(n->wifi->ipv4_address));
+  QString addr = QString((const char*)find_wlan0_ip());
+  if (addr.size()) {
+    title->setText(QString("Sound tester - %1").arg(addr));
   } else {
     title->setText("Sound tester");
   }
