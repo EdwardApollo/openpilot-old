@@ -136,6 +136,7 @@ void Sound::updateSounds() {
     });
     vlayout->addWidget(b);
   }
+  vlayout->addStretch();
 
   if (n->wifi->ipv4_address.size()) {
     title->setText(QString("Sound tester - %1").arg(n->wifi->ipv4_address));
