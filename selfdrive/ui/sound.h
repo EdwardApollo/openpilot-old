@@ -10,7 +10,7 @@ public:
   explicit Sound(QWidget *parent = 0);
 
 private slots:
-  void updateSounds();
+  void updateFiles();
 
 private:
   QSoundEffect e;

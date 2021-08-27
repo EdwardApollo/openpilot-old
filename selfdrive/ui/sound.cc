@@ -19,7 +19,7 @@
 #include "selfdrive/ui/qt/offroad/networking.h"
 #endif
 
-#define SOUNDS_DIR "/data/openpilot/selfdrive/assets/sounds/"
+#define FILES_DIR "/data/openpilot/selfdrive/assets/sounds/"
 
 
 char* find_wlan0_ip() {
@@ -80,7 +80,7 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
 
     QPushButton *clear = new QPushButton("Clear Files");
     QObject::connect(clear, &QPushButton::clicked, [=]() {
-      std::system(std::string("rm -rf " SOUNDS_DIR "*").c_str());
+      std::system(std::string("rm -rf " FILES_DIR "*").c_str());
     });
     clear->setObjectName("navBtn");
     clear->setStyleSheet("background-color: #465BEA;");
@@ -112,12 +112,12 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
   addWidget(wifi);
 
   // cleanup
-  std::system("rm -rf " SOUNDS_DIR "*");
-  std::system("cd " SOUNDS_DIR " && git checkout .");
-  std::system("mkdir -p " SOUNDS_DIR);
+  std::system("rm -rf " FILES_DIR "*");
+  std::system("cd " FILES_DIR " && git checkout .");
+  std::system("mkdir -p " FILES_DIR);
 
   QTimer *t = new QTimer(this);
-  QObject::connect(t, &QTimer::timeout, this, &Sound::updateSounds);
+  QObject::connect(t, &QTimer::timeout, this, &Sound::updateFiles);
   t->start(1000);
 
   setStyleSheet(R"(
@@ -166,17 +166,33 @@ Sound::Sound(QWidget *parent) : QStackedWidget(parent) {
   )");
 }
 
-void Sound::updateSounds() {
+void Sound::updateFiles() {
   clearLayout(vlayout);
-  auto files = QDir(SOUNDS_DIR).entryList(QDir::Files);
+  auto files = QDir(FILES_DIR).entryList(QDir::Files);
   for (auto &f : files) {
-    ButtonControl *b = new ButtonControl(f, "PLAY");
-    b->setStyleSheet("border: none;");
-    QObject::connect(b, &ButtonControl::clicked, [=]() {
-      e.setSource(QUrl::fromLocalFile(SOUNDS_DIR + f));
-      e.play();
-    });
-    vlayout->addWidget(b);
+    if (f.contains(".wav")){
+      // Audio file
+      ButtonControl *b = new ButtonControl(f, "PLAY");
+      b->setStyleSheet("border: none;");
+      QObject::connect(b, &ButtonControl::clicked, [=]() {
+        e.setSource(QUrl::fromLocalFile(FILES_DIR + f));
+        e.play();
+      });
+      vlayout->addWidget(b);
+    } else if (f.contains(".py")) {
+      // Python script
+      ButtonControl *b = new ButtonControl(f, "RUN");
+      b->setStyleSheet("border: none;");
+      QObject::connect(b, &ButtonControl::clicked, [=]() {
+        qDebug() << "Running: " << f;
+        if (std::system(QString("python %1").arg(FILES_DIR + f).toStdString().c_str()) == 0){
+          ConfirmationDialog::alert("Program '" + f + "' ran succesfully!", this);
+        } else {
+          ConfirmationDialog::alert("Program '" + f + "' failed to run!", this);
+        }
+      });
+      vlayout->addWidget(b);
+    }
   }
   vlayout->addStretch();
 
