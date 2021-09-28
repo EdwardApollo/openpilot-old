@@ -171,7 +171,7 @@ class LongitudinalMpc():
     self.accel_limit_arr = np.zeros((N+1, 2))
     self.accel_limit_arr[:,0] = -1.2
     self.accel_limit_arr[:,1] = 1.2
-    self.source = SOURCES[2]
+    self.source = SOURCES[3]
 
   def reset(self):
     self.solver = AcadosOcpSolver('long', N, EXPORT_DIR)
