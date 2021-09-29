@@ -29,8 +29,8 @@
 #include "selfdrive/boardd/panda.h"
 #include "selfdrive/boardd/pigeon.h"
 
-#define MAX_IR_POWER 1.0f
-#define MIN_IR_POWER 0.95f
+#define MAX_IR_POWER 0.5f
+#define MIN_IR_POWER 0.48f
 #define CUTOFF_IL 200
 #define SATURATE_IL 1600
 #define NIBBLE_TO_HEX(n) ((n) < 10 ? (n) + '0' : ((n) - 10) + 'a')
