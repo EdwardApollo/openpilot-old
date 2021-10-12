@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 from common.realtime import sec_since_boot
-from common.numpy_fast import clip, interp
+from common.numpy_fast import interp, clip
 from selfdrive.swaglog import cloudlog
 from selfdrive.modeld.constants import index_function
 from selfdrive.controls.lib.radar_helpers import _LEAD_ACCEL_TAU
@@ -322,19 +322,20 @@ class LongitudinalMpc():
     lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1])
     lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1])
 
-    # Fake an obstacle for cruise, this ensures smooth acceleration to set speed
-    # when the leads are no factor.
-    cruise_lower_bound = v_ego + (3/4) * self.cruise_min_a * T_IDXS
-    cruise_upper_bound = v_ego + (3/4) * self.cruise_max_a * T_IDXS
-    v_cruise_clipped = np.clip(v_cruise * np.ones(N+1),
-                               cruise_lower_bound,
-                               cruise_upper_bound)
-    cruise_obstacle = T_IDXS*v_cruise_clipped + (3/4) * get_safe_obstacle_distance(v_cruise_clipped)
+    cruise_target = T_IDXS * v_cruise
 
-    x_obstacles = np.column_stack([lead_0_obstacle, lead_1_obstacle, cruise_obstacle])
-    self.source = SOURCES[np.argmin(x_obstacles[0])]
-    self.params[:,2] = np.min(x_obstacles, axis=1)
+    x_targets = np.column_stack([x,
+                                lead_0_obstacle - (3/4) * get_safe_obstacle_distance(v),
+                                lead_1_obstacle - (3/4) * get_safe_obstacle_distance(v),
+                                cruise_target])
+    #self.source = SOURCES[np.argmin(x_obstacles[0])]
+    self.params[:,2] = 1e8
     self.params[:,3] = np.copy(self.prev_a)
+
+    self.yref[:,1] = np.min(x_targets, axis=1)
+    for i in range(N):
+      self.solver.set(i, "yref", self.yref[i])
+    self.solver.set(N, "yref", self.yref[N][:COST_E_DIM])
 
     self.run()
     if (np.any(lead_xv_0[:,0] - self.x_sol[:,0] < CRASH_DISTANCE) and
