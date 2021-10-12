@@ -325,11 +325,11 @@ class LongitudinalMpc():
     cruise_target = T_IDXS * v_cruise + x[0]
 
     x_targets = np.column_stack([x,
-                                1e4 + lead_0_obstacle - (3/4) * get_safe_obstacle_distance(v),
-                                1e4 + lead_1_obstacle - (3/4) * get_safe_obstacle_distance(v),
+                                lead_0_obstacle - (3/4) * get_safe_obstacle_distance(v),
+                                lead_1_obstacle - (3/4) * get_safe_obstacle_distance(v),
                                 cruise_target])
     #self.source = SOURCES[np.argmin(x_obstacles[0])]
-    self.params[:,2] = 1e4
+    self.params[:,2] = 1e3
     self.params[:,3] = np.copy(self.prev_a)
 
     self.yref[:,1] = np.min(x_targets, axis=1)
