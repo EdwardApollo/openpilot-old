@@ -229,7 +229,7 @@ class LongitudinalMpc():
       self.set_weights_for_lead_policy()
 
   def set_weights_for_lead_policy(self):
-    W = np.diag([0., .01, .0, 10., .1, 1.])
+    W = np.diag([0., .03, .0, 10., 0.0, 1.])
     for i in range(N):
       W[4,4] = .1 * np.interp(T_IDXS[i], [0.0, 1.0, 2.0], [1.0, 1.0, 0.0])
       self.solver.cost_set(i, 'W', W)
