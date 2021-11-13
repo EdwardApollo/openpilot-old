@@ -76,6 +76,7 @@ if __name__ == "__main__":
   #kd = 1000
   kd = 300
   i = 0
+  i_speed = 0
 
   last_err = 0
 
@@ -85,6 +86,7 @@ if __name__ == "__main__":
   acc_err = 0
 
   joy_x,joy_y = 0,0
+  measured_speed = 0
 
   while 1:
     sm.update()
@@ -96,10 +98,11 @@ if __name__ == "__main__":
       pass
 
 
-    #desired_speed = 0
-    #measured_speed = 0
-    #P_speed = 0
-    #set_point =  P_speed * (desired_speed - measured_speed)
+    desired_speed = -joy_y
+    kp_speed = 0.001
+    ki_speed = 0.00000
+    i_speed += ki_speed * (desired_speed - measured_speed)
+    set_point =  kp_speed * (desired_speed - measured_speed) + i_speed
     try:
       err = (-sm['liveLocationKalman'].orientationNED.value[1]) - set_point
       d =  -sm['liveLocationKalman'].angularVelocityDevice.value[1]
@@ -118,6 +121,7 @@ if __name__ == "__main__":
 
     can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
     cs = ci.update(None, can_strs)
+    measured_speed = 0.5 * (cs.wheelSpeeds.fl + cs.wheelSpeeds.fr)
 
     ret = car.CarControl.new_message()
     speed = int(np.clip(err*kp + acc_err*ki + d*kd, -200, 200))
