@@ -42,6 +42,8 @@ class CarInterface(CarInterfaceBase):
     return [msg]
 
 if __name__ == "__main__":
+  sm = messaging.SubMaster(['liveLocationKalman'])
+
   can_sock = messaging.sub_sock('can')
   pm = messaging.PubMaster(['sendcan'])
 
@@ -49,14 +51,29 @@ if __name__ == "__main__":
   ci = CarInterface(CP, None, CarState)
 
   from common.realtime import Ratekeeper
-  rk = Ratekeeper(10)
+  rk = Ratekeeper(50)
+  i = 0
+
+  kp = -2000
+  ki = 0
+  kd = -200
+
+  last_err = 0
   while 1:
+    sm.update()
+    err = sm['liveLocationKalman'].orientationNED.value[1] #- 0.032
+    i += err
+    d = err - last_err
+    last_err = err
+
     can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
     cs = ci.update(None, can_strs)
-    print(cs.wheelSpeeds)
+
     ret = car.CarControl.new_message()
     ret.actuators.steer = 0
     ret.actuators.accel = 0
+    #ret.actuators.accel = int(err*kp + i*ki + d*kd)
+    print("%7.2f %7.2f %7.2f %7.2f" % (err*180/3.1415, err, i, d), cs.wheelSpeeds, ret.actuators.accel)
     msgs = ci.apply(ret)
     pm.send('sendcan', can_list_to_can_capnp(msgs, msgtype='sendcan'))
     rk.keep_time()
