@@ -70,23 +70,13 @@ if __name__ == "__main__":
   while 1:
     sm.update()
 
-    """
-    for e in sm['sensorEvents']:
-      if e.sensor == 5:
-        gyro = e.gyroUncalibrated.v[1]
-      if e.sensor == 1:
-        accel = np.arcsin(np.clip(e.acceleration.v[2]/9.81, -1, 1))
-    if accel is None:
-      continue
-    if intgyro is None:
-      intgyro = accel
-
-    intgyro += gyro*dt
-    intgyro = intgyro * 0.99 + accel*0.01
-    err = intgyro - set_point
-    """
+    desired_speed = 0
+    measured_speed = 0
+    P_speed = 0
+    set_point =  P_speed * (desired_speed - measured_speed)
     try:
       err = (-sm['liveLocationKalman'].orientationNED.value[1]) - set_point
+      d =  -sm['liveLocationKalman'].angularVelocityDevice.value[1]
     except Exception:
       continue
 
@@ -95,7 +85,6 @@ if __name__ == "__main__":
 
     i += err
     i = np.clip(i, -2, 2)
-    d = (err - last_err)/dt
     last_err = err
 
     can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
@@ -109,35 +98,6 @@ if __name__ == "__main__":
     msgs = ci.apply(ret)
     pm.send('sendcan', can_list_to_can_capnp(msgs, msgtype='sendcan'))
     rk.keep_time()
-
-
-  """
-  sm = messaging.SubMaster(['liveLocationKalman'])
-
-
-  i = 0
-
-  while 1:
-    sm.update()
-    err = sm['liveLocationKalman'].orientationNED.value[1] #- 0.032
-    i += err
-    d = err - last_err
-    last_err = err
-
-    can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
-    cs = ci.update(None, can_strs)
-
-    ret = car.CarControl.new_message()
-    ret.actuators.steer = 0
-    ret.actuators.accel = 0
-    #ret.actuators.accel = int(err*kp + i*ki + d*kd)
-    print("%7.2f %7.2f %7.2f %7.2f" % (err*180/3.1415, err, i, d), cs.wheelSpeeds, ret.actuators.accel)
-    msgs = ci.apply(ret)
-    pm.send('sendcan', can_list_to_can_capnp(msgs, msgtype='sendcan'))
-    rk.keep_time()
-  """
-
-
 
 
 

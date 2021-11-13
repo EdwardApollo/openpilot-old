@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import serial
 import struct
 import time
@@ -7,7 +8,7 @@ import cereal.messaging as messaging
 from opendbc.can.parser import CANParser
 from opendbc.can.packer import CANPacker
 
-# sudo chmod 666 /dev/ttyUSB0
+os.system('sudo chmod 666 /dev/ttyUSB0')
 
 def open_serial():
   return serial.Serial('/dev/ttyUSB0', 115200)
