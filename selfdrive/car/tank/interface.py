@@ -35,7 +35,7 @@ def main(stdscr):
     elif c == ord('d'):
       stdscr.addstr(0, 0, 'Turning right')
       send_cmd(pm, packer, -100, 100)
-    elif c == ord('w'):
+    elif c == ord('s'):
       stdscr.addstr(0, 0, 'Moving backward')
       send_cmd(pm, packer, -100, -100)
     elif c == ord(' '):
