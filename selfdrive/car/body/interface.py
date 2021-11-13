@@ -88,7 +88,8 @@ if __name__ == "__main__":
   joy_x,joy_y = 0,0
   measured_speed = 0
   measured_steer = 0
-
+  desired_speed = 0
+  desired_steer = 0
   while 1:
     sm.update()
 
@@ -99,10 +100,13 @@ if __name__ == "__main__":
       pass
 
 
-    desired_speed = -joy_y
+    alpha = 1.0
+    desired_speed = (1. - alpha)*desired_speed + alpha *(-joy_y/2)
+    desired_steer = (1. - alpha)*desired_steer + alpha*joy_x
     kp_speed = 0.001
     ki_speed = 0.000001
     i_speed += ki_speed * (desired_speed - measured_speed)
+    i_speed = np.clip(i_speed, -0.05, 0.05)
     set_point =  kp_speed * (desired_speed - measured_speed) + i_speed
     try:
       err = (-sm['liveLocationKalman'].orientationNED.value[1]) - set_point
@@ -123,14 +127,12 @@ if __name__ == "__main__":
     can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
     cs = ci.update(None, can_strs)
     measured_speed = 0.5 * (cs.wheelSpeeds.fl + cs.wheelSpeeds.fr)
-    measured_steer = cs.wheelSpeeds.fl - cs.wheelSpeeds.fr
+    measured_steer = -cs.wheelSpeeds.fl + cs.wheelSpeeds.fr
 
     ret = car.CarControl.new_message()
     speed = int(np.clip(err*kp + acc_err*ki + d*kd, -200, 200))
 
-    x = joy_x
-    desired_steer = x
-    kp_steer = 0.1
+    kp_steer = 0.2
     diff_torque = kp_steer * (desired_steer - measured_steer)
 
     ret.actuators.steer = speed + diff_torque
