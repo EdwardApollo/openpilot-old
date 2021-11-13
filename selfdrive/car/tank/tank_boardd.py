@@ -33,8 +33,8 @@ class EV3:
         if mac_addr == host.upper():
           self.device = dev
           break
-        else:
-          self.device = dev
+      else:
+        self.device = dev
 
     if self.device is None:
       if mac_addr is None:
