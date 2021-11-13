@@ -1,4 +1,6 @@
 import time
+from curses import wrapper
+
 import cereal.messaging as messaging
 from cereal import car
 from opendbc.can.packer import CANPacker
@@ -12,17 +14,34 @@ def send_cmd(pm, speed_left, speed_right):
   pm.send('sendcan', can_list_to_can_capnp([msg], msgtype='sendcan'))
 
 
-if __name__ == "__main__":
+def main(stdscr):
   packer = CANPacker("comma_tank")
   pm = messaging.PubMaster(['sendcan'])
 
-  for i in range(3):
-    send_cmd(pm, 100, -100)
-    time.sleep(0.3)
-    send_cmd(pm, 0, 0)
-    time.sleep(0.3)
+  stdscr.clear()
+  stdscr.addstr(0, 0, 'Stopped')
+  stdscr.refresh()
 
-    send_cmd(pm, -100, 100)
-    time.sleep(0.3)
-    send_cmd(pm, 0, 0)
-    time.sleep(0.3)
+  while True:
+    c = stdscr.getch()
+    stdscr.clear()
+
+    if c == ord('w'):
+      stdscr.addstr(0, 0, 'Moving forward')
+      send_cmd(pm, 100, 100)
+    elif c == ord('a'):
+      stdscr.addstr(0, 0, 'Turning left')
+      send_cmd(pm, 100, -100)
+    elif c == ord('d'):
+      stdscr.addstr(0, 0, 'Turning right')
+      send_cmd(pm, -100, 100)
+    elif c == ord('w'):
+      stdscr.addstr(0, 0, 'Moving backward')
+      send_cmd(pm, -100, -100)
+    elif c == ord(' '):
+      stdscr.addstr(0, 0, 'Stopped')
+      send_cmd(pm, 0, 0)
+    stdscr.refresh()
+
+if __name__ == "__main__":
+  wrapper(main)
