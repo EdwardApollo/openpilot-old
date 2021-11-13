@@ -1,3 +1,4 @@
+import time
 import cereal.messaging as messaging
 from cereal import car
 from opendbc.can.packer import CANPacker

@@ -2,7 +2,6 @@
 import usb.core
 import usb.util
 import struct
-import time
 
 import cereal.messaging as messaging
 from opendbc.can.parser import CANParser
