@@ -66,6 +66,7 @@ class EV3:
       ops
     ])
     self.device.write(EP_OUT, cmd, 100)
+    self.device.read(EP_IN, 1024, 100)
 
 
 # Generate comands
@@ -110,7 +111,7 @@ def stop():
 if __name__ == '__main__':
   ev3 = EV3()
 
-  for i in range(5):
+  for i in range(3):
     ev3.send_cmd(start(100, -100))
     time.sleep(0.3)
     ev3.send_cmd(stop())
