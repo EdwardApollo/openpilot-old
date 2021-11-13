@@ -71,10 +71,10 @@ class LiveKalman():
   Q_diag = np.array([0.03**2, 0.03**2, 0.03**2,
                      0.001**2, 0.001**2, 0.001**2,
                      0.01**2, 0.01**2, 0.01**2,
-                     0.1**2, 0.1**2, 0.1**2,
+                     5.**2, 5.**2, 5.**2,
                      (0.005 / 100)**2, (0.005 / 100)**2, (0.005 / 100)**2,
                      (0.02 / 100)**2,
-                     3**2, 3**2, 3**2,
+                     10.**2, 10.**2, 10.**2,
                      (0.05 / 60)**2, (0.05 / 60)**2, (0.05 / 60)**2,
                      0.005**2, 0.005**2, 0.005**2])
 
@@ -83,7 +83,7 @@ class LiveKalman():
                     ObservationKind.PHONE_ACCEL: np.array([.5**2, .5**2, .5**2]),
                     ObservationKind.CAMERA_ODO_ROTATION: np.array([0.05**2, 0.05**2, 0.05**2]),
                     ObservationKind.IMU_FRAME: np.array([0.05**2, 0.05**2, 0.05**2]),
-                    ObservationKind.NO_ROT: np.array([0.005**2, 0.005**2, 0.005**2]),
+                    ObservationKind.NO_ROT: np.array([100**2, 100**2, .1**2]),
                     ObservationKind.NO_ACCEL: np.array([0.05**2, 0.05**2, 0.05**2]),
                     ObservationKind.ECEF_POS: np.array([5**2, 5**2, 5**2]),
                     ObservationKind.ECEF_VEL: np.array([.5**2, .5**2, .5**2]),
