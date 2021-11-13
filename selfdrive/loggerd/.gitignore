@@ -1,2 +1,3 @@
 loggerd
 tests/test_logger
+pipe_encoder

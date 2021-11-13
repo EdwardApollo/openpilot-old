@@ -20,6 +20,8 @@
 #include "selfdrive/common/util.h"
 #include "selfdrive/loggerd/include/msm_media_info.h"
 
+constexpr int IO_CONTEXT_BUFFER_SIZE = 32*1024;
+
 // Check the OMX error code and assert if an error occurred.
 #define OMX_CHECK(_expr)              \
   do {                                \
@@ -476,6 +478,10 @@ int OmxEncoder::encode_frame(const uint8_t *y_ptr, const uint8_t *u_ptr, const u
   return ret;
 }
 
+int write_stderr_buf(void *opaque, uint8_t *buf, int buf_size) {
+  return util::safe_fwrite(buf, 1, buf_size, stderr);
+}
+
 void OmxEncoder::encoder_open(const char* path) {
   int err;
 
@@ -509,8 +515,26 @@ void OmxEncoder::encoder_open(const char* path) {
     this->codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
     this->codec_ctx->time_base = (AVRational){ 1, this->fps };
 
-    err = avio_open(&this->ofmt_ctx->pb, this->vid_path, AVIO_FLAG_WRITE);
-    assert(err >= 0);
+    if (this->write) {
+      err = avio_open(&this->ofmt_ctx->pb, this->vid_path, AVIO_FLAG_WRITE);
+      assert(err >= 0);
+    } else {
+      if (!this->output_buffer) {
+        this->output_buffer = (unsigned char*) av_malloc(IO_CONTEXT_BUFFER_SIZE);
+        assert(this->output_buffer);
+      }
+
+      this->ofmt_ctx->pb = avio_alloc_context(
+        this->output_buffer,
+        IO_CONTEXT_BUFFER_SIZE,
+        1,
+        NULL,
+        NULL,
+        write_stderr_buf,
+        NULL
+      );
+      this->ofmt_ctx->flags |= AVFMT_FLAG_CUSTOM_IO;
+    }
 
     this->wrote_codec_config = false;
   } else {
@@ -523,10 +547,9 @@ void OmxEncoder::encoder_open(const char* path) {
       }
 #endif
     }
-  }
-
-  if (this->pipe_to_stderr) {
-    this->of = stderr;
+    if (this->pipe_to_stderr) {
+      this->of = stderr;
+    }
   }
 
   if (!this->pipe_to_stderr) {
@@ -569,7 +592,9 @@ void OmxEncoder::encoder_close() {
     if (this->remuxing) {
       av_write_trailer(this->ofmt_ctx);
       avcodec_free_context(&this->codec_ctx);
-      avio_closep(&this->ofmt_ctx->pb);
+      if (!this->pipe_to_stderr) {
+        avio_closep(&this->ofmt_ctx->pb);
+      }
       avformat_free_context(this->ofmt_ctx);
     } else {
       if (this->of) {
