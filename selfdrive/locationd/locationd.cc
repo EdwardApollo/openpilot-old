@@ -196,6 +196,9 @@ VectorXd Localizer::get_stdev() {
 }
 
 void Localizer::handle_sensors(double current_time, const capnp::List<cereal::SensorEventData, capnp::Kind::STRUCT>::Reader& log) {
+  
+  MatrixXdr ecef_pos_R = Vector3d::Constant(10. * 10.).asDiagonal();
+  this->kf->predict_and_observe(current_time, OBSERVATION_ECEF_POS, { Vector3d(3.88e6, -3.37e6, 3.76e6) }, { ecef_pos_R });
   // TODO does not yet account for double sensor readings in the log
   for (int i = 0; i < log.size(); i++) {
     const cereal::SensorEventData::Reader& sensor_reading = log[i];
@@ -461,27 +464,13 @@ int Localizer::locationd_thread() {
       if (sm.updated(service) && sm.valid(service)) {
         const cereal::Event::Reader log = sm[service];
         this->handle_msg(log);
-      }
-    }
-
-    if (sm.updated("cameraOdometry")) {
-      uint64_t logMonoTime = sm["cameraOdometry"].getLogMonoTime();
-      bool inputsOK = sm.allAliveAndValid();
-      bool sensorsOK = sm.alive("sensorEvents") && sm.valid("sensorEvents");
-      bool gpsOK = this->isGpsOK();
-
-      MessageBuilder msg_builder;
-      kj::ArrayPtr<capnp::byte> bytes = this->get_message_bytes(msg_builder, logMonoTime, inputsOK, sensorsOK, gpsOK);
-      pm.send("liveLocationKalman", bytes.begin(), bytes.size());
-
-      if (sm.frame % 1200 == 0 && gpsOK) {  // once a minute
-        VectorXd posGeo = this->get_position_geodetic();
-        std::string lastGPSPosJSON = util::string_format(
-          "{\"latitude\": %.15f, \"longitude\": %.15f, \"altitude\": %.15f}", posGeo(0), posGeo(1), posGeo(2));
-
-        std::thread([&params] (const std::string gpsjson) {
-          params.put("LastGPSPosition", gpsjson);
-        }, lastGPSPosJSON).detach();
+        MessageBuilder msg_builder;
+        uint64_t logMonoTime = sm["sensorEvents"].getLogMonoTime();
+        bool inputsOK = 1;
+        bool sensorsOK = sm.alive("sensorEvents") && sm.valid("sensorEvents");
+        bool gpsOK = 0;
+        kj::ArrayPtr<capnp::byte> bytes = this->get_message_bytes(msg_builder, logMonoTime, inputsOK, sensorsOK, gpsOK);
+        pm.send("liveLocationKalman", bytes.begin(), bytes.size());
       }
     }
   }
