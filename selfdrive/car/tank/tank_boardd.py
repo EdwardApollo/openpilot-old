@@ -4,6 +4,10 @@ import usb.util
 import struct
 import time
 
+import cereal.messaging as messaging
+from opendbc.can.parser import CANParser
+from opendbc.can.packer import CANPacker
+
 ID_VENDOR_LEGO = 0x0694
 ID_PRODUCT_EV3 = 0x0005
 EP_IN  = 0x81
