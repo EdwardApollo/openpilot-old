@@ -87,6 +87,7 @@ if __name__ == "__main__":
 
   joy_x,joy_y = 0,0
   measured_speed = 0
+  measured_steer = 0
 
   while 1:
     sm.update()
@@ -100,7 +101,7 @@ if __name__ == "__main__":
 
     desired_speed = -joy_y
     kp_speed = 0.001
-    ki_speed = 0.00000
+    ki_speed = 0.000001
     i_speed += ki_speed * (desired_speed - measured_speed)
     set_point =  kp_speed * (desired_speed - measured_speed) + i_speed
     try:
@@ -122,14 +123,18 @@ if __name__ == "__main__":
     can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
     cs = ci.update(None, can_strs)
     measured_speed = 0.5 * (cs.wheelSpeeds.fl + cs.wheelSpeeds.fr)
+    measured_steer = cs.wheelSpeeds.fl - cs.wheelSpeeds.fr
 
     ret = car.CarControl.new_message()
     speed = int(np.clip(err*kp + acc_err*ki + d*kd, -200, 200))
 
-    x = joy_x / 10
+    x = joy_x
+    desired_steer = x
+    kp_steer = 0.1
+    diff_torque = kp_steer * (desired_steer - measured_steer)
 
-    ret.actuators.steer = speed + x
-    ret.actuators.accel = speed - x
+    ret.actuators.steer = speed + diff_torque
+    ret.actuators.accel = speed - diff_torque
     #ret.actuators.steer = joy_x*2
     #ret.actuators.accel = 5
     #ret.actuators.accel =
