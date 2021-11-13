@@ -106,7 +106,7 @@ class LiveKalman():
     roll_bias, pitch_bias, yaw_bias = state[States.GYRO_BIAS, :]
     acceleration = state[States.ACCELERATION, :]
     imu_angles = state[States.IMU_OFFSET, :]
-    acc_bias = state[States.ACC_BIAS, :]
+    #acc_bias = state[States.ACC_BIAS, :]
 
     dt = sp.Symbol('dt')
 
@@ -191,7 +191,7 @@ class LiveKalman():
 
     pos = sp.Matrix([x, y, z])
     gravity = quat_rot.T * ((EARTH_GM / ((x**2 + y**2 + z**2)**(3.0 / 2.0))) * pos)
-    h_acc_sym = (gravity + acceleration + acc_bias)
+    h_acc_sym = (gravity + acceleration)
     h_acc_stationary_sym = acceleration
     h_phone_rot_sym = sp.Matrix([vroll, vpitch, vyaw])
 
