@@ -8,7 +8,7 @@ def send_cmd(pm, speed_left, speed_right):
   msg = packer.make_can_msg("TANK_COMMAND", 0,
     {"SPEED_LEFT": int(speed_left),
      "SPEED_RIGHT": int(speed_right)})
-  pm.send('sendcan', can_list_to_can_capnp(msgs, msgtype='sendcan'))
+  pm.send('sendcan', can_list_to_can_capnp([msg], msgtype='sendcan'))
 
 
 if __name__ == "__main__":
