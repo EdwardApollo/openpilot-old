@@ -3,50 +3,63 @@ import serial
 import struct
 import time
 from hexdump import hexdump
-
-# sudo chmod 666 /dev/ttyUSB0
-
-def open_serial():
-  return serial.Serial('/dev/ttyUSB0', 115200)
-
-def cmd(ser, steer, speed):
-  ret = b"\xcd\xab" + struct.pack("hhH", steer, speed, 0xabcd ^ steer ^ speed)
-  ser.write(ret)
-
-def getframe(ser):
-  while 1:
-    while ser.read() != b"\xcd":
-      continue
-    if ser.read() == b"\xab":
-      return struct.unpack("hhhhhhHH", ser.read(8*2))
+import cereal.messaging as messaging
 
 from selfdrive.car.interfaces import CarInterfaceBase
 from cereal import car
 
-class CarInterface(CarInterfaceBase):
-  def __init__(self, CP, CarController, CarState):
-    super().__init__(CP, CarController, CarState)
-    self.ser = open_serial()
+from selfdrive.boardd.boardd_api_impl import can_list_to_can_capnp  # pylint: disable=no-name-in-module,import-error
 
-  def update(self, c, can_strings):
-    dat = getframe(self.ser)
+from opendbc.can.parser import CANParser
+from opendbc.can.packer import CANPacker
+packer = CANPacker("comma_body")
+
+from selfdrive.car.interfaces import CarStateBase
+class CarState(CarStateBase):
+  def update(self, cp):
     ret = car.CarState.new_message()
-    ret.wheelSpeeds.fl = -dat[2]
-    ret.wheelSpeeds.fr = dat[3]
+    ret.wheelSpeeds.fl = -cp.vl['BODY_SENSOR']['SPEED_L']
+    ret.wheelSpeeds.fr = cp.vl['BODY_SENSOR']['SPEED_R']
     return ret
 
+  @staticmethod
+  def get_can_parser(CP):
+    return CANParser("comma_body", [("SPEED_L", "BODY_SENSOR", 0),
+                                    ("SPEED_R", "BODY_SENSOR", 0)], [], enforce_checks=False)
+
+class CarInterface(CarInterfaceBase):
+  def update(self, c, can_strings):
+    self.cp.update_strings(can_strings)
+    ret = self.CS.update(self.cp)
+
+    self.CS.out = ret.as_reader()
+    return self.CS.out
+
   def apply(self, c):
-    cmd(self.ser, int(c.actuators.steer), int(c.actuators.accel))
+    msg = packer.make_can_msg("BODY_COMMAND", 0,
+      {"SPEED": int(c.actuators.accel),
+       "STEER": int(c.actuators.steer)})
+    return [msg]
 
 if __name__ == "__main__":
-  ci = CarInterface(car.CarParams.new_message(), None, None)
+  can_sock = messaging.sub_sock('can')
+  pm = messaging.PubMaster(['sendcan'])
+
+  CP = car.CarParams.new_message()
+  ci = CarInterface(CP, None, CarState)
+
+  from common.realtime import Ratekeeper
+  rk = Ratekeeper(10)
   while 1:
-    cs = ci.update(None, None)
+    can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
+    cs = ci.update(None, can_strs)
     print(cs.wheelSpeeds)
     ret = car.CarControl.new_message()
     ret.actuators.steer = 0
-    ret.actuators.accel = 100
-    ci.apply(ret)
+    ret.actuators.accel = 0
+    msgs = ci.apply(ret)
+    pm.send('sendcan', can_list_to_can_capnp(msgs, msgtype='sendcan'))
+    rk.keep_time()
 
 
 
