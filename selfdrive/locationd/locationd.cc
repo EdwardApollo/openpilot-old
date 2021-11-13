@@ -451,7 +451,7 @@ int Localizer::locationd_thread() {
   const std::initializer_list<const char *> service_list =
       { "gpsLocationExternal", "sensorEvents", "cameraOdometry", "liveCalibration", "carState" };
   PubMaster pm({ "liveLocationKalman" });
-  SubMaster sm(service_list, nullptr, { "gpsLocationExternal" });
+  SubMaster sm(service_list, nullptr, { "sensorEvents" });
 
   Params params;
 
