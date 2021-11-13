@@ -18,7 +18,7 @@ PORT_D = 8
 
 
 class EV3:
-  def __init__(self, host: str = None):
+  def __init__(self, host = None):
     self.device = None
     mac_addr = None
     hosts = []
@@ -71,7 +71,7 @@ class EV3:
 
 # Generate comands
 
-def LCX(value: int) -> bytes:
+def LCX(value):
   if -32 <= value < 0:
     return struct.pack('b', 0x3F & (value + 64))
   if 0 <= value < 32:
@@ -82,7 +82,7 @@ def LCX(value: int) -> bytes:
     return b'\x82' + struct.pack('<h', value)
   return b'\x83' + struct.pack('<i', value)
 
-def start(speed_left: int, speed_right: int):
+def start(speed_left, speed_right):
   return b''.join([
     OP_OUTPUT_SPEED,
     LCX(0),      # LAYER
@@ -109,15 +109,19 @@ def stop():
 
 
 if __name__ == '__main__':
+  can_sock = messaging.sub_sock('sendcan')
+  cp = CANParser("comma_tank", [("SPEED_LEFT", "TANK_COMMAND", 0),
+                                ("SPEED_RIGHT", "TANK_COMMAND", 0)], [("TANK_COMMAND", 5)])
+  packer = CANPacker("comma_tank")
   ev3 = EV3()
 
-  for i in range(3):
-    ev3.send_cmd(start(100, -100))
-    time.sleep(0.3)
-    ev3.send_cmd(stop())
-    time.sleep(0.3)
-
-    ev3.send_cmd(start(-100, 100))
-    time.sleep(0.3)
-    ev3.send_cmd(stop())
-    time.sleep(0.3)
+  while 1:
+    can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
+    cp.update_strings(can_strs)
+    if cp.can_valid:
+      speed_left = int(cp.vl['TANK_COMMAND']['SPEED_LEFT'])
+      speed_right = int(cp.vl['TANK_COMMAND']['SPEED_RIGHT'])
+      if speed_left != 0 and speed_right != 0:
+        ev3.send_cmd(start(speed_left, speed_right))
+      else:
+        ev3.send_cmd(stop())
