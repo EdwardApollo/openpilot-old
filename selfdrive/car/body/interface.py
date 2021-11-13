@@ -42,43 +42,72 @@ class CarInterface(CarInterfaceBase):
        "STEER": int(c.actuators.steer)})
     return [msg]
 
+import atexit
+
 if __name__ == "__main__":
   from common.realtime import Ratekeeper
-  rk = Ratekeeper(50)
+  dtn = 80
+  rk = Ratekeeper(dtn)
 
   can_sock = messaging.sub_sock('can')
   pm = messaging.PubMaster(['sendcan'])
   CP = car.CarParams.new_message()
   ci = CarInterface(CP, None, CarState)
 
-  sm = messaging.SubMaster(['sensorEvents', 'liveLocationKalman'])
+  def done():
+    print("sending 0")
+    ret = car.CarControl.new_message()
+    msgs = ci.apply(ret)
+    pm.send('sendcan', can_list_to_can_capnp(msgs, msgtype='sendcan'))
+
+  atexit.register(done)
+
+  sm = messaging.SubMaster(['sensorEvents', 'liveLocationKalman', 'testJoystick'])
   gyro = 0
   accel = None
-  dt = 1/50
+  dt = 1/dtn
   intgyro = None
 
-  kp = 4000
+  #kp = 4000
+  #kp = 800
+  kp = 1000
+  #ki = 1/5
   ki = 0
-  kd = 500
+  #kd = 1000
+  kd = 300
   i = 0
 
   last_err = 0
 
   #set_point = np.deg2rad(-2)
-  set_point = np.deg2rad(-3.2)
+  set_point = np.deg2rad(-0)
+
+  acc_err = 0
+
+  joy_x,joy_y = 0,0
 
   while 1:
     sm.update()
 
-    desired_speed = 0
-    measured_speed = 0
-    P_speed = 0
-    set_point =  P_speed * (desired_speed - measured_speed)
+    try:
+      joy_x = sm['testJoystick'].axes[0]
+      joy_y = sm['testJoystick'].axes[1]
+    except Exception:
+      pass
+
+
+    #desired_speed = 0
+    #measured_speed = 0
+    #P_speed = 0
+    #set_point =  P_speed * (desired_speed - measured_speed)
     try:
       err = (-sm['liveLocationKalman'].orientationNED.value[1]) - set_point
       d =  -sm['liveLocationKalman'].angularVelocityDevice.value[1]
     except Exception:
       continue
+
+    err += np.deg2rad(joy_y)/50
+
 
     #print(np.rad2deg(intgyro), np.rad2deg(accel))
     #rk.keep_time()
@@ -91,10 +120,17 @@ if __name__ == "__main__":
     cs = ci.update(None, can_strs)
 
     ret = car.CarControl.new_message()
-    ret.actuators.steer = 0
-    #ret.actuators.accel = 0
-    ret.actuators.accel = int(np.clip(err*kp + i*ki + d*kd, -200, 200))
-    print("%7.2f %7.2f %7.2f %7.2f" % (err*180/3.1415, err, i, d), cs.wheelSpeeds, ret.actuators.accel)
+    speed = int(np.clip(err*kp + acc_err*ki + d*kd, -200, 200))
+
+    x = joy_x / 10
+
+    ret.actuators.steer = speed + x
+    ret.actuators.accel = speed - x
+    #ret.actuators.steer = joy_x*2
+    #ret.actuators.accel = 5
+    #ret.actuators.accel =
+    print("%7.2f %7.2f %7.2f %7.2f" % (err*180/3.1415, err, acc_err, d), cs.wheelSpeeds, ret.actuators.accel, joy_x, joy_y)
+    acc_err += cs.wheelSpeeds.fl + cs.wheelSpeeds.fr
     msgs = ci.apply(ret)
     pm.send('sendcan', can_list_to_can_capnp(msgs, msgtype='sendcan'))
     rk.keep_time()
