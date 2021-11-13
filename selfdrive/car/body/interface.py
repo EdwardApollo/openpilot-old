@@ -3,6 +3,7 @@ import serial
 import struct
 import time
 from hexdump import hexdump
+import numpy as np
 import cereal.messaging as messaging
 
 from selfdrive.car.interfaces import CarInterfaceBase
@@ -42,23 +43,80 @@ class CarInterface(CarInterfaceBase):
     return [msg]
 
 if __name__ == "__main__":
-  sm = messaging.SubMaster(['liveLocationKalman'])
+  from common.realtime import Ratekeeper
+  rk = Ratekeeper(50)
 
   can_sock = messaging.sub_sock('can')
   pm = messaging.PubMaster(['sendcan'])
-
   CP = car.CarParams.new_message()
   ci = CarInterface(CP, None, CarState)
 
-  from common.realtime import Ratekeeper
-  rk = Ratekeeper(50)
+  sm = messaging.SubMaster(['sensorEvents', 'liveLocationKalman'])
+  gyro = 0
+  accel = None
+  dt = 1/50
+  intgyro = None
+
+  kp = 4000
+  ki = 0
+  kd = 500
   i = 0
 
-  kp = -2000
-  ki = 0
-  kd = -200
-
   last_err = 0
+
+  #set_point = np.deg2rad(-2)
+  set_point = np.deg2rad(-3.2)
+
+  while 1:
+    sm.update()
+
+    """
+    for e in sm['sensorEvents']:
+      if e.sensor == 5:
+        gyro = e.gyroUncalibrated.v[1]
+      if e.sensor == 1:
+        accel = np.arcsin(np.clip(e.acceleration.v[2]/9.81, -1, 1))
+    if accel is None:
+      continue
+    if intgyro is None:
+      intgyro = accel
+
+    intgyro += gyro*dt
+    intgyro = intgyro * 0.99 + accel*0.01
+    err = intgyro - set_point
+    """
+    try:
+      err = (-sm['liveLocationKalman'].orientationNED.value[1]) - set_point
+    except Exception:
+      continue
+
+    #print(np.rad2deg(intgyro), np.rad2deg(accel))
+    #rk.keep_time()
+
+    i += err
+    i = np.clip(i, -2, 2)
+    d = (err - last_err)/dt
+    last_err = err
+
+    can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
+    cs = ci.update(None, can_strs)
+
+    ret = car.CarControl.new_message()
+    ret.actuators.steer = 0
+    #ret.actuators.accel = 0
+    ret.actuators.accel = int(np.clip(err*kp + i*ki + d*kd, -200, 200))
+    print("%7.2f %7.2f %7.2f %7.2f" % (err*180/3.1415, err, i, d), cs.wheelSpeeds, ret.actuators.accel)
+    msgs = ci.apply(ret)
+    pm.send('sendcan', can_list_to_can_capnp(msgs, msgtype='sendcan'))
+    rk.keep_time()
+
+
+  """
+  sm = messaging.SubMaster(['liveLocationKalman'])
+
+
+  i = 0
+
   while 1:
     sm.update()
     err = sm['liveLocationKalman'].orientationNED.value[1] #- 0.032
@@ -77,6 +135,7 @@ if __name__ == "__main__":
     msgs = ci.apply(ret)
     pm.send('sendcan', can_list_to_can_capnp(msgs, msgtype='sendcan'))
     rk.keep_time()
+  """
 
 
 
