@@ -32,11 +32,11 @@ if __name__ == "__main__":
   ser = open_serial()
   while 1:
     can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
-    cp.update_strings(can_strs)
-    if cp.can_valid:
+    updated = cp.update_strings(can_strs)
+    if len(updated) >= 1:
       cmd(ser, int(cp.vl['BODY_COMMAND']['STEER']), int(cp.vl['BODY_COMMAND']['SPEED']))
     dat = getframe(ser)
-    msg = packer.make_can_msg("BODY_SENSOR", 0, 
+    msg = packer.make_can_msg("BODY_SENSOR", 0,
       {'SPEED_L': dat[2],
        'SPEED_R': dat[3],
        'BAT_VOLTAGE': dat[4],
