@@ -156,9 +156,10 @@ static const char* omx_color_fomat_name(uint32_t format) {
 
 // ***** encoder functions *****
 
-OmxEncoder::OmxEncoder(const char* filename, int width, int height, int fps, int bitrate, bool h265, bool downscale, bool write) {
+OmxEncoder::OmxEncoder(const char* filename, int width, int height, int fps, int bitrate, bool h265, bool downscale, bool write, bool pipe_to_stderr) {
   this->filename = filename;
-  this->write = write;
+  this->pipe_to_stderr = pipe_to_stderr;
+  this->write = (write && !pipe_to_stderr);
   this->width = width;
   this->height = height;
   this->fps = fps;
@@ -478,8 +479,14 @@ int OmxEncoder::encode_frame(const uint8_t *y_ptr, const uint8_t *u_ptr, const u
 void OmxEncoder::encoder_open(const char* path) {
   int err;
 
-  snprintf(this->vid_path, sizeof(this->vid_path), "%s/%s", path, this->filename);
-  LOGD("encoder_open %s remuxing:%d", this->vid_path, this->remuxing);
+  if (!this->pipe_to_stderr || path != NULL) {
+    snprintf(this->vid_path, sizeof(this->vid_path), "%s/%s", path, this->filename);
+    LOGD("encoder_open %s remuxing:%d", this->vid_path, this->remuxing);
+  } else {
+    // TODO: clean up
+    snprintf(this->vid_path, sizeof(this->vid_path), "/tmp/output.ts");
+    LOGD("encoder_open: stdout encoder");
+  }
 
   if (this->remuxing) {
     avformat_alloc_output_context2(&this->ofmt_ctx, NULL, NULL, this->vid_path);
@@ -518,11 +525,17 @@ void OmxEncoder::encoder_open(const char* path) {
     }
   }
 
-  // create camera lock file
-  snprintf(this->lock_path, sizeof(this->lock_path), "%s/%s.lock", path, this->filename);
-  int lock_fd = HANDLE_EINTR(open(this->lock_path, O_RDWR | O_CREAT, 0664));
-  assert(lock_fd >= 0);
-  close(lock_fd);
+  if (this->pipe_to_stderr) {
+    this->of = stderr;
+  }
+
+  if (!this->pipe_to_stderr) {
+    // create camera lock file
+    snprintf(this->lock_path, sizeof(this->lock_path), "%s/%s.lock", path, this->filename);
+    int lock_fd = HANDLE_EINTR(open(this->lock_path, O_RDWR | O_CREAT, 0664));
+    assert(lock_fd >= 0);
+    close(lock_fd);
+  }
 
   this->is_open = true;
   this->counter = 0;
