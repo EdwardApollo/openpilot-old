@@ -10,7 +10,12 @@ rpacker = CANPacker("acura_ilx_2016_nidec")
 def can_function(pm, speed, angle, idx, cruise_button, is_engaged, blinkers, steering_pressed):
   msg = []
   left_blinker, right_blinker = blinkers["left"], blinkers["right"]
-  torque = 1500 if steering_pressed else 0
+  if (steering_pressed and blinkers["left"]):
+    torque = 1500
+  elif (steering_pressed and blinkers["right"]):
+    torque = -1500
+  else:
+    torque = 0
   # *** powertrain bus ***
 
   speed = speed * 3.6  # convert m/s to kph
