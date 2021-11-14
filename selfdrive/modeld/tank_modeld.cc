@@ -12,7 +12,7 @@
 ExitHandler do_exit;
 
 void run_model(TankModelState &model, VisionIpcClient &vipc_client) {
-  PubMaster pm({"sendcan"});
+  PubMaster pm({"driverState"});
 
   while (!do_exit) {
     VisionIpcBufExtra extra = {};
@@ -20,7 +20,7 @@ void run_model(TankModelState &model, VisionIpcClient &vipc_client) {
     if (buf == nullptr) continue;
 
     TankModelResult res = tankmodel_eval_frame(&model, buf->addr, buf->width, buf->height);
-    printf("Bump prob: %f", res.bump_prob);
+    printf("Bump prob: %f\n", res.bump_prob);
 
     // send dm packet
     MessageBuilder msg;
