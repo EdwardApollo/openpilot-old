@@ -22,7 +22,7 @@ void dmonitoring_init(DMonitoringModelState* s) {
 #ifdef USE_ONNX_MODEL
   s->m = new ONNXModel("../../models/dmonitoring_model.onnx", &s->output[0], OUTPUT_SIZE, USE_DSP_RUNTIME);
 #else
-  s->m = new SNPEModel("../../models/dmonitoring_model_features.dlc", &s->output[1], OUTPUT_SIZE, USE_GPU_RUNTIME);
+  s->m = new SNPEModel("../../models/dmonitoring_model_features.dlc", &s->output[1], 0, USE_DSP_RUNTIME);
 #endif
 }
 
@@ -132,6 +132,7 @@ DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_
     for (int c = 0; c < MODEL_WIDTH/2; c++) {
       // Y_ul
       net_input_buf[(r*MODEL_WIDTH/2) + c + (0*(MODEL_WIDTH/2)*(MODEL_HEIGHT/2))] = s->tensor[resized_y[(2*r)*resized_width + 2*c]];
+      printf("%f\n", net_input_buf[(r*MODEL_WIDTH/2) + c + (0*(MODEL_WIDTH/2)*(MODEL_HEIGHT/2))] );
       // Y_dl
       net_input_buf[(r*MODEL_WIDTH/2) + c + (1*(MODEL_WIDTH/2)*(MODEL_HEIGHT/2))] = s->tensor[resized_y[(2*r+1)*resized_width + 2*c]];
       // Y_ur
@@ -163,6 +164,7 @@ DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_
   double t2 = millis_since_boot();
 
   DMonitoringResult ret = {0};
+
   for (int i = 0; i < 3; ++i) {
     ret.face_orientation[i] = s->output[i];
     ret.face_orientation_meta[i] = softplus(s->output[6 + i]);
