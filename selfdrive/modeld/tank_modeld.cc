@@ -13,7 +13,6 @@ ExitHandler do_exit;
 
 void run_model(TankModelState &model, VisionIpcClient &vipc_client) {
   PubMaster pm({"sendcan"});
-  double last = 0;
 
   while (!do_exit) {
     VisionIpcBufExtra extra = {};
@@ -25,9 +24,6 @@ void run_model(TankModelState &model, VisionIpcClient &vipc_client) {
 
     // send dm packet
     // dmonitoring_publish(pm, extra.frame_id, res, (t2 - t1) / 1000.0, model.output);
-
-    //printf("dmonitoring process: %.2fms, from last %.2fms\n", t2 - t1, t1 - last);
-    last = t1;
   }
 }
 
