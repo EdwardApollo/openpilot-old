@@ -11,15 +11,20 @@ from typing import Any
 import cv2
 from multiprocessing import Process, Queue
 from cereal.visionipc.visionipc_pyx import VisionIpcServer, VisionStreamType  # pylint: disable=no-name-in-module, import-error
+from panda import Panda
+from opendbc.can.packer import CANPacker
 
 import cereal.messaging as messaging
 from common.params import Params
 from common.numpy_fast import clip
-from common.realtime import Ratekeeper, DT_DMON
-from lib.can import can_function
-from selfdrive.car.honda.values import CruiseButtons
+from common.realtime import DT_CTRL, Ratekeeper, DT_DMON
+# from lib.can import can_function
+from lib.can_hyundai import can_function
+# from selfdrive.car.honda.values import CruiseButtons
+from selfdrive.car.hyundai.values import Buttons
 from selfdrive.test.helpers import set_params_enabled
 
+packer = CANPacker("hyundai_kia_generic")
 parser = argparse.ArgumentParser(description='Bridge between CARLA and openpilot.')
 parser.add_argument('--joystick', action='store_true')
 parser.add_argument('--low_quality', action='store_true')
@@ -29,17 +34,19 @@ parser.add_argument('--laneless', action='store_true')
 
 os.environ["SIMULATION"] = "1"
 
+steer_angle_from_wheel = None
+torque_from_wheel = None
 args = parser.parse_args()
 
 # W, H = 1164, 874
 W, H, FOCAL_LENGTH = 1928, 1208, 2648.0
 REPEAT_COUNTER = 5
 PRINT_DECIMATION = 100
+# STEER_RATIO = 10.
 STEER_RATIO = 10.
-LANE_CHANGE_TORQUE_WIDTH = 10
 
 pm = messaging.PubMaster(['roadCameraState', 'sensorEvents', 'can', "gpsLocationExternal"])
-sm = messaging.SubMaster(['carControl', 'controlsState', 'carState'])
+sm = messaging.SubMaster(['carControl', 'controlsState', 'carState', 'sendcan'])
 
 
 class VehicleState:
@@ -54,7 +61,6 @@ class VehicleState:
       "left": False,
       "right": False
     }
-    self.steering_pressed = False
 
 
 def steer_rate_limit(old, new):
@@ -125,7 +131,9 @@ def panda_state_function(exit_event: threading.Event):
       'ignitionLine': True,
       'pandaType': "blackPanda",
       'controlsAllowed': True,
-      'safetyModel': 'hondaNidec'
+      # 'safetyModel': 'hondaNidec'
+      'safetyModel': 'hyundai',
+      'safetyParam': Panda.FLAG_HYUNDAI_LONG
     }
     pm.send('pandaStates', dat)
     time.sleep(0.5)
@@ -200,10 +208,87 @@ def fake_driver_monitoring(exit_event: threading.Event):
 def can_function_runner(vs: VehicleState, exit_event: threading.Event):
   i = 0
   while not exit_event.is_set():
-    can_function(pm, vs.speed, vs.angle, i, vs.cruise_button, vs.is_engaged, vs.blinkers, vs.steering_pressed)
-    if vs.steering_pressed:
-      vs.steering_pressed = False
+    can_function(pm, vs.speed, vs.angle, i, vs.cruise_button, vs.is_engaged, vs.blinkers, steer_angle_from_wheel, torque_from_wheel)
     time.sleep(0.01)
+    i += 1
+
+def create_eps_ems16(packer, counter, engine_status):
+  # send @ 100Hz
+  values = {
+    "ENG_STAT": engine_status,  # 3 == running?
+    "AliveCounter": counter % 4,
+  }
+  dat = packer.make_can_msg("EMS16", 0, values)[2]
+  h_sum = sum(dat[i] & 0xF0 for i in range(8))
+  l_sum = sum(dat[i] & 0x0F for i in range(8))
+  csum = 0x10 - ((h_sum >> 4) + l_sum & 0xF) & 0xF
+  values["Checksum"] = csum
+  return packer.make_can_msg("EMS16", 0, values)
+
+def create_eps_366ems(packer, speed_kph):
+  # send @ 100Hz
+  values = {
+    "VS": speed_kph,
+  }
+  return packer.make_can_msg("EMS_366", 0, values)
+
+def create_eps_clu11(packer, counter, speed_kph):
+  # send @ 50Hz
+  values = {
+    "CF_Clu_Vanz": speed_kph,
+    "CF_Clu_AliveCnt1": counter % 0x10,
+  }
+  return packer.make_can_msg("CLU11", 0, values)
+
+def create_eps_psts(packer, counter):
+  # send @ 50Hz
+  values = {
+    "Counter": counter,
+    # more fields are in the checksum, but doesn't matter when zero
+    "Checksum": ((counter & 0b11 == 0b11) + (counter & 0b1100 == 0b1100)) & 3,
+  }
+  return packer.make_can_msg("P_STS", 0, values)
+
+def sendcan_function_runner(vs: VehicleState, exit_event: threading.Event):
+  global steer_angle_from_wheel
+  global torque_from_wheel
+  p = Panda()
+  p.set_safety_mode(Panda.SAFETY_ALLOUTPUT)
+
+  i = 0
+  while not exit_event.is_set():
+    if not len(sm['sendcan']):
+      time.sleep(0.01)
+      continue
+
+    msgs = []
+    speed_kph = vs.speed * 3.6
+    msgs.append(create_eps_ems16(packer, i, 3))
+    msgs.append(create_eps_366ems(packer, speed_kph))
+    if i % 2 == 0:
+      msgs.append(create_eps_clu11(packer, int(i / 2), speed_kph))
+      msgs.append(create_eps_psts(packer, int(i / 2)))
+
+    # append from sendcan
+    for m in sm['sendcan']:
+      msgs.append([m.address, 0, m.dat, m.src])
+      # print(msgs[-1])
+
+    # print(p.health())
+
+    # send over the panda
+    p.can_send_many(msgs)
+    while True:
+      received = p.can_recv()
+      if not received:
+        break
+      for can_msg in received:
+        if can_msg[3] == 0 and can_msg[0] == 688:
+          steer_angle_from_wheel = can_msg
+        elif can_msg[3] == 0 and can_msg[0] == 593:
+          torque_from_wheel = can_msg
+
+    time.sleep(DT_CTRL)
     i += 1
 
 
@@ -272,6 +357,7 @@ def bridge(q):
   threads.append(threading.Thread(target=peripheral_state_function, args=(exit_event,)))
   threads.append(threading.Thread(target=fake_driver_monitoring, args=(exit_event,)))
   threads.append(threading.Thread(target=can_function_runner, args=(vehicle_state, exit_event,)))
+  threads.append(threading.Thread(target=sendcan_function_runner, args=(vehicle_state, exit_event,)))
   for t in threads:
     t.start()
 
@@ -311,7 +397,6 @@ def bridge(q):
       m = message.split('_')
       if m[0] == "steer":
         steer_manual = float(m[1])
-        vehicle_state.steering_pressed = True
       elif m[0] == "throttle":
         throttle_manual = float(m[1])
         is_openpilot_engaged = False
@@ -320,17 +405,21 @@ def bridge(q):
         is_openpilot_engaged = False
       elif m[0] == "reverse":
         # in_reverse = not in_reverse
-        cruise_button = CruiseButtons.CANCEL
+        # cruise_button = CruiseButtons.CANCEL
+        cruise_button = Buttons.CANCEL
         is_openpilot_engaged = False
       elif m[0] == "cruise":
         if m[1] == "down":
-          cruise_button = CruiseButtons.DECEL_SET
+          # cruise_button = CruiseButtons.DECEL_SET
+          cruise_button = Buttons.SET_DECEL
           is_openpilot_engaged = True
         elif m[1] == "up":
-          cruise_button = CruiseButtons.RES_ACCEL
+          # cruise_button = CruiseButtons.RES_ACCEL
+          cruise_button = Buttons.RES_ACCEL
           is_openpilot_engaged = True
         elif m[1] == "cancel":
-          cruise_button = CruiseButtons.CANCEL
+          # cruise_button = CruiseButtons.CANCEL
+          cruise_button = Buttons.CANCEL
           is_openpilot_engaged = False
       elif m[0] == "blinker":
         vehicle_state.blinkers[m[1]] = not vehicle_state.blinkers[m[1]]
@@ -348,9 +437,10 @@ def bridge(q):
       old_brake = brake_out
 
       # print('message',old_throttle, old_steer, old_brake)
+    sm.update(0)
+    actual_steering_angle = sm['carState'].steeringAngleDeg
 
     if is_openpilot_engaged:
-      sm.update(0)
       # TODO gas and brake is deprecated
       throttle_op = clip(sm['carControl'].actuators.accel/1.6, 0.0, 1.0)
       brake_op = clip(-sm['carControl'].actuators.accel/4.0, 0.0, 1.0)
@@ -390,9 +480,12 @@ def bridge(q):
 
     # --------------Step 2-------------------------------
 
-    steer_carla = steer_out / (max_steer_angle * STEER_RATIO * -1)
+    # steer_carla = steer_out / (max_steer_angle * STEER_RATIO * -1)
+    steer_carla = actual_steering_angle / (max_steer_angle * STEER_RATIO * -1)
 
     steer_carla = np.clip(steer_carla, -1, 1)
+    print('ACTUAL STEERING wheel angle', steer_carla * max_steer_angle)
+
     steer_out = steer_carla * (max_steer_angle * STEER_RATIO * -1)
     old_steer = steer_carla * (max_steer_angle * STEER_RATIO * -1)
 
@@ -415,9 +508,7 @@ def bridge(q):
         "; throttle: ", round(vc.throttle, 3),
         "; steer(c/deg): ", round(vc.steer, 3), round(steer_out, 3),
         "; brake: ", round(vc.brake, 3),
-        "; blinkers: ", vehicle_state.blinkers,
-        "; steering_pressed: ", vehicle_state.steering_pressed)
-
+        "; blinkers: ", vehicle_state.blinkers)
     rk.keep_time()
 
   # Clean up resources in the opposite order they were created.
@@ -447,6 +538,8 @@ if __name__ == "__main__":
   msg.liveCalibration.validBlocks = 20
   msg.liveCalibration.rpyCalib = [0.0, 0.0, 0.0]
   Params().put("CalibrationParams", msg.to_bytes())
+  Params().put_bool("DisableRadar", True)
+  Params().put_bool("DisableRadar_Allow", True)
   if args.laneless:
     Params().put_bool("EndToEndToggle", True)
   else:
