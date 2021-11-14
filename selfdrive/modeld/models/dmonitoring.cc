@@ -169,7 +169,7 @@ DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_
   float * virtualchris;
   size_t result;
 
-  pFile = fopen("/data/openpilot/models/virtual_harald.fmap", "rb");
+  pFile = fopen("/data/openpilot/models/virtual_chris.fmap", "rb");
 
   // obtain file size:
   fseek (pFile , 0 , SEEK_END);
@@ -193,8 +193,8 @@ DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_
     chrisdistance += powf( no - virtualchris[i], 2);
   }
 
-  if (chrisdistance < 16.0) {printf("This is Harald!");}
-  printf("%f\n", chrisdistance);
+  if (chrisdistance < 13.5) {printf("This is Chris!\n");}
+  //printf("%f\n", chrisdistance);
 
   for (int i = 0; i < 3; ++i) {
     ret.face_orientation[i] = s->output[i];
