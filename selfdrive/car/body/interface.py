@@ -50,7 +50,7 @@ if __name__ == "__main__":
   rk = Ratekeeper(dtn)
 
   can_sock = messaging.sub_sock('can')
-  pm = messaging.PubMaster(['sendcan'])
+  pm = messaging.PubMaster(['sendcan', 'carState'])
   CP = car.CarParams.new_message()
   ci = CarInterface(CP, None, CarState)
 
@@ -130,6 +130,13 @@ if __name__ == "__main__":
 
     can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
     cs = ci.update(None, can_strs)
+    #car_events = self.events.to_msg()
+    cs_send = messaging.new_message('carState')
+    #cs_send.valid = CS.canValid
+    cs_send.carState = cs
+    #cs_send.carState.events = car_events
+    pm.send('carState', cs_send)
+
     measured_speed = 0.5 * (cs.wheelSpeeds.fl + cs.wheelSpeeds.fr)
     measured_steer = -cs.wheelSpeeds.fl + cs.wheelSpeeds.fr
 
