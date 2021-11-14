@@ -78,3 +78,8 @@ lenv.Program('_modeld', [
     "modeld.cc",
     "models/driving.cc",
   ]+common_model, LIBS=libs)
+
+lenv.Program('_tank_modeld', [
+    "tank_modeld.cc",
+    "models/tank.cc",
+  ]+common_model, LIBS=libs)
