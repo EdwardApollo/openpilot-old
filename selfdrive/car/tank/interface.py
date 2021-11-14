@@ -55,7 +55,7 @@ def modelcontrol():
     running_bump_prob = .8 * running_bump_prob + .2 * bump_prob
     print(bump_prob, running_bump_prob)
 
-    if running_bump_prob > .8:
+    if bump_prob > .5:
       send_cmd(pm, packer, 100, -100)
     else:
       send_cmd(pm, packer, 100, 100)
