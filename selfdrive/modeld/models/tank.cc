@@ -14,9 +14,10 @@ TankModelResult tankmodel_eval_frame(TankModelState* s, void* stream_buf, int wi
   for (int w=0; w<WIDTH; w++) {
     for (int h=0; h<HEIGHT; h++) {
       for (int c=0; c<CHANNELS; c++) {
-        if (w%2 == 0 && h%2 == 0)
-        s->net_input_buf[c*HEIGHT/2*WIDTH/2*sizeof(float) + h*WIDTH/2*sizeof(float) + w*sizeof(float)] =
-          (float)(((uint8_t*)stream_buf)[h*WIDTH*CHANNELS + w*CHANNELS + c]);
+        if (w%2 == 0 && h%2 == 0) {
+          s->net_input_buf[c*HEIGHT/2*WIDTH/2 + h/2*WIDTH/2 + w/2] =
+            ((float)(((uint8_t*)stream_buf)[h*WIDTH*CHANNELS + w*CHANNELS + c])) / 255.0;
+        }
       }
     }
   }
