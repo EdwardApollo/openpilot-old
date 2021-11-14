@@ -16,7 +16,7 @@ TankModelResult tankmodel_eval_frame(TankModelState* s, void* stream_buf, int wi
       for (int c=0; c<CHANNELS; c++) {
         if (w%2 == 0 && h%2 == 0)
         s->net_input_buf[c*WIDTH/2*HEIGHT/2*sizeof(float) + w*HEIGHT/2*sizeof(float) + h*sizeof(float)] =
-          (float)((uint8_t)stream_buf[w*HEIGHT*CHANNELS*sizeof(float) + h*CHANNELS*sizeof(float) + c*sizeof(float)]);
+          (float)(((uint8_t*)stream_buf)[w*HEIGHT*CHANNELS*sizeof(float) + h*CHANNELS*sizeof(float) + c*sizeof(float)]);
       }
     }
   }
@@ -26,9 +26,9 @@ TankModelResult tankmodel_eval_frame(TankModelState* s, void* stream_buf, int wi
   double t2 = millis_since_boot();
 
   TankModelResult ret = {0};
-  ret.bump_prob[0] = s->output[0];
+  ret.bump_prob = s->output[0];
   ret.execution_time = (t2 - t1) / 1000.;
-  return ret
+  return ret;
 }
 
 void tankmodel_free(TankModelState* s) {
