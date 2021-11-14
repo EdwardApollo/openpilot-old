@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import usb.core
-import usb.util
+import usb.core # pylint: disable=import-error
+import usb.util # pylint: disable=import-error
 import struct
 
 import cereal.messaging as messaging
@@ -56,7 +56,7 @@ class EV3:
     # initial read
     try:
       self.device.read(EP_IN, 1024, 100)
-    except:
+    except: # pylint: disable=bare-except
       pass
 
   def send_cmd(self, ops: bytes, local_mem: int=0, global_mem: int=0):

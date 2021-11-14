@@ -1,10 +1,6 @@
-import time
 from curses import wrapper
-
 import cereal.messaging as messaging
-from cereal import car
 from opendbc.can.packer import CANPacker
-from selfdrive.car.interfaces import CarInterfaceBase
 from selfdrive.boardd.boardd_api_impl import can_list_to_can_capnp  # pylint: disable=no-name-in-module,import-error
 
 def send_cmd(pm, packer, speed_left, speed_right):
