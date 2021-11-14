@@ -5,7 +5,6 @@ import struct
 
 import cereal.messaging as messaging
 from opendbc.can.parser import CANParser
-from opendbc.can.packer import CANPacker
 
 ID_VENDOR_LEGO = 0x0694
 ID_PRODUCT_EV3 = 0x0005
@@ -115,7 +114,6 @@ if __name__ == '__main__':
   can_sock = messaging.sub_sock('sendcan')
   cp = CANParser("comma_tank", [("SPEED_LEFT", "TANK_COMMAND", 0),
                                 ("SPEED_RIGHT", "TANK_COMMAND", 0)], [("TANK_COMMAND", 5)])
-  packer = CANPacker("comma_tank")
   ev3 = EV3()
 
   while 1:
