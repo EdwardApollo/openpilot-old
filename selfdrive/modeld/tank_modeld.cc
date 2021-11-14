@@ -25,7 +25,7 @@ void run_model(TankModelState &model, VisionIpcClient &vipc_client) {
     // send dm packet
     MessageBuilder msg;
     auto framed = msg.initEvent().initDriverState();
-    framed.setFrameId(frame_id);
+    framed.setFrameId(extra.frame_id);
     framed.setOccludedProb(res.bump_prob);
     pm.send("driverState", msg);
   }
