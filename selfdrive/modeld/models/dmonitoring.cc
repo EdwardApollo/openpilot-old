@@ -1,7 +1,7 @@
 #include <cstring>
 
 #include "libyuv.h"
-
+#include <math.h>
 #include "selfdrive/common/mat.h"
 #include "selfdrive/common/params.h"
 #include "selfdrive/common/timing.h"
@@ -22,7 +22,7 @@ void dmonitoring_init(DMonitoringModelState* s) {
 #ifdef USE_ONNX_MODEL
   s->m = new ONNXModel("../../models/dmonitoring_model.onnx", &s->output[0], OUTPUT_SIZE, USE_DSP_RUNTIME);
 #else
-  s->m = new SNPEModel("../../models/dmonitoring_model_features.dlc", &s->output[1], 0, USE_DSP_RUNTIME);
+  s->m = new SNPEModel("../../models/dmonitoring_model_features.dlc", &s->output[0], 0, USE_DSP_RUNTIME);
 #endif
 }
 
@@ -132,7 +132,7 @@ DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_
     for (int c = 0; c < MODEL_WIDTH/2; c++) {
       // Y_ul
       net_input_buf[(r*MODEL_WIDTH/2) + c + (0*(MODEL_WIDTH/2)*(MODEL_HEIGHT/2))] = s->tensor[resized_y[(2*r)*resized_width + 2*c]];
-      printf("%f\n", net_input_buf[(r*MODEL_WIDTH/2) + c + (0*(MODEL_WIDTH/2)*(MODEL_HEIGHT/2))] );
+      // printf("%f\n", net_input_buf[(r*MODEL_WIDTH/2) + c + (0*(MODEL_WIDTH/2)*(MODEL_HEIGHT/2))] );
       // Y_dl
       net_input_buf[(r*MODEL_WIDTH/2) + c + (1*(MODEL_WIDTH/2)*(MODEL_HEIGHT/2))] = s->tensor[resized_y[(2*r+1)*resized_width + 2*c]];
       // Y_ur
@@ -164,6 +164,37 @@ DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_
   double t2 = millis_since_boot();
 
   DMonitoringResult ret = {0};
+  FILE * pFile;
+  long lSize;
+  float * virtualchris;
+  size_t result;
+
+  pFile = fopen("/data/openpilot/models/virtual_harald.fmap", "rb");
+
+  // obtain file size:
+  fseek (pFile , 0 , SEEK_END);
+  lSize = ftell (pFile);
+  rewind (pFile);
+
+  // allocate memory to contain the whole file:
+  virtualchris = (float*) malloc (sizeof(float)*lSize);
+  if (virtualchris == NULL) {fputs ("Memory error",stderr); exit (2);}
+
+  // copy the file into the buffer:
+  result = fread (virtualchris,1,lSize,pFile);
+  float chrisdistance=0;
+  float no;
+  // printf("%f", s->output[0]);
+
+  for (int i = 0; i<800; ++i){
+    no = s->output[i]; 
+    // printf("%f\n", s->output[i]);
+    // printf("%f\n", virtualchris[i]);
+    chrisdistance += powf( no - virtualchris[i], 2);
+  }
+
+  if (chrisdistance < 16.0) {printf("This is Harald!");}
+  printf("%f\n", chrisdistance);
 
   for (int i = 0; i < 3; ++i) {
     ret.face_orientation[i] = s->output[i];
