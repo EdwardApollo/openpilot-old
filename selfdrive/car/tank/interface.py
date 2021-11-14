@@ -47,11 +47,18 @@ def modelcontrol():
   packer = CANPacker("comma_tank")
   pm = messaging.PubMaster(['sendcan'])
   sm = messaging.SubMaster(['driverState'])
+  running_bump_prob = 0
 
   while True:
     sm.update()
     bump_prob = sm['driverState'].occludedProb
-    print(bump_prob)
+    running_bump_prob = .8 * running_bump_prob + .2 * bump_prob
+    print(bump_prob, running_bump_prob)
+
+    if running_bump_prob > .8:
+      send_cmd(pm, packer, 100, -100)
+    else:
+      send_cmd(pm, packer, 100, 100)
 
 
 # Entry point

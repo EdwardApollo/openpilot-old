@@ -20,7 +20,6 @@ void run_model(TankModelState &model, VisionIpcClient &vipc_client) {
     if (buf == nullptr) continue;
 
     TankModelResult res = tankmodel_eval_frame(&model, buf->addr, buf->width, buf->height);
-    printf("Bump prob: %f\n", res.bump_prob);
 
     // send dm packet
     MessageBuilder msg;
