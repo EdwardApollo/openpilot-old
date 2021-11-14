@@ -52,12 +52,7 @@ class EV3:
       except NotImplementedError:
         pass
     self.device.set_configuration()
-
-    # initial read
-    try:
-      self.device.read(EP_IN, 1024, 100)
-    except: # pylint: disable=bare-except
-      pass
+    self.device.read(EP_IN, 1024, 100)
 
   def send_cmd(self, ops: bytes, local_mem: int=0, global_mem: int=0):
     cmd = b''.join([
@@ -87,14 +82,14 @@ def LCX(value):
 def start(speed_left, speed_right):
   return b''.join([
     OP_OUTPUT_SPEED,
-    LCX(0),      # LAYER
-    LCX(PORT_A), # PORT
-    LCX(speed_left),    # SPEED
+    LCX(0),           # LAYER
+    LCX(PORT_A),      # PORT
+    LCX(speed_left),  # SPEED
 
     OP_OUTPUT_SPEED,
-    LCX(0),      # LAYER
-    LCX(PORT_D), # PORT
-    LCX(speed_right),    # SPEED
+    LCX(0),           # LAYER
+    LCX(PORT_D),      # PORT
+    LCX(speed_right), # SPEED
 
     OP_OUTPUT_START,
     LCX(0),
