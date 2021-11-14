@@ -1,3 +1,4 @@
+import sys
 from curses import wrapper
 import cereal.messaging as messaging
 from opendbc.can.packer import CANPacker
@@ -10,6 +11,7 @@ def send_cmd(pm, packer, speed_left, speed_right):
   pm.send('sendcan', can_list_to_can_capnp([msg], msgtype='sendcan'))
 
 
+# Manual control
 def main(stdscr):
   packer = CANPacker("comma_tank")
   pm = messaging.PubMaster(['sendcan'])
@@ -39,5 +41,24 @@ def main(stdscr):
       send_cmd(pm, packer, 0, 0)
     stdscr.refresh()
 
+
+# Automatic control
+def modelcontrol():
+  packer = CANPacker("comma_tank")
+  pm = messaging.PubMaster(['sendcan'])
+  sm = messaging.SubMaster(['driverState'])
+
+  while True:
+    sm.update()
+    bump_prob = sm['driverState'].occludedProb
+    print(bump_prob)
+
+
+# Entry point
 if __name__ == "__main__":
-  wrapper(main)
+  if sys.argv[1] == 'manual':
+    wrapper(main)
+  elif sys.argv[1] == 'auto':
+    modelcontrol()
+  else:
+    raise Exception("Please select either 'manual' or 'auto' mode")

@@ -23,7 +23,11 @@ void run_model(TankModelState &model, VisionIpcClient &vipc_client) {
     printf("Bump prob: %f", res.bump_prob);
 
     // send dm packet
-    // dmonitoring_publish(pm, extra.frame_id, res, (t2 - t1) / 1000.0, model.output);
+    MessageBuilder msg;
+    auto framed = msg.initEvent().initDriverState();
+    framed.setFrameId(frame_id);
+    framed.setOccludedProb(res.bump_prob);
+    pm.send("driverState", msg);
   }
 }
 
