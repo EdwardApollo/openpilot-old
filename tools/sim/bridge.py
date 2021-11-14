@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 import argparse
-import carla # pylint: disable=import-error
+import carla  # pylint: disable=import-error
 import math
 import numpy as np
 import time
 import threading
 from cereal import log
-from multiprocessing import Process, Queue
+import os
 from typing import Any
+import cv2
+from multiprocessing import Process, Queue
+from cereal.visionipc.visionipc_pyx import VisionIpcServer, VisionStreamType  # pylint: disable=no-name-in-module, import-error
 
 import cereal.messaging as messaging
 from common.params import Params
@@ -21,18 +24,23 @@ parser = argparse.ArgumentParser(description='Bridge between CARLA and openpilot
 parser.add_argument('--joystick', action='store_true')
 parser.add_argument('--low_quality', action='store_true')
 parser.add_argument('--town', type=str, default='Town04_Opt')
-parser.add_argument('--spawn_point', dest='num_selected_spawn_point',
-        type=int, default=16)
+parser.add_argument('--spawn_point', dest='num_selected_spawn_point', type=int, default=16)
+parser.add_argument('--laneless', action='store_true')
+
+os.environ["SIMULATION"] = "1"
 
 args = parser.parse_args()
 
-W, H = 1164, 874
+# W, H = 1164, 874
+W, H, FOCAL_LENGTH = 1928, 1208, 2648.0
 REPEAT_COUNTER = 5
 PRINT_DECIMATION = 100
-STEER_RATIO = 15.
+STEER_RATIO = 10.
+LANE_CHANGE_TORQUE_WIDTH = 10
 
 pm = messaging.PubMaster(['roadCameraState', 'sensorEvents', 'can', "gpsLocationExternal"])
-sm = messaging.SubMaster(['carControl','controlsState'])
+sm = messaging.SubMaster(['carControl', 'controlsState', 'carState'])
+
 
 class VehicleState:
   def __init__(self):
@@ -40,8 +48,14 @@ class VehicleState:
     self.angle = 0
     self.bearing_deg = 0.0
     self.vel = carla.Vector3D()
-    self.cruise_button= 0
-    self.is_engaged=False
+    self.cruise_button = 0
+    self.is_engaged = False
+    self.blinkers = {
+      "left": False,
+      "right": False
+    }
+    self.steering_pressed = False
+
 
 def steer_rate_limit(old, new):
   # Rate limiting to 0.5 degrees per step
@@ -53,21 +67,39 @@ def steer_rate_limit(old, new):
   else:
     return new
 
+
 frame_id = 0
-def cam_callback(image):
+vipc_server = VisionIpcServer("camerad")
+vipc_server.create_buffers(VisionStreamType.VISION_STREAM_RGB_BACK, 4, True, W, H)
+vipc_server.create_buffers(VisionStreamType.VISION_STREAM_YUV_BACK, 40, False, W, H)
+vipc_server.start_listener()
+
+
+def publishRoadCameraState(img, frame):
   global frame_id
-  img = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-  img = np.reshape(img, (H, W, 4))
-  img = img[:, :, [0, 1, 2]].copy()
+  yuv = cv2.cvtColor(img, cv2.COLOR_RGB2YUV_I420)
+  eof = frame_id * 0.05
+  vipc_server.send(VisionStreamType.VISION_STREAM_RGB_BACK, img.tobytes(), frame_id, eof, eof)
+  vipc_server.send(VisionStreamType.VISION_STREAM_YUV_BACK, yuv.tobytes(), frame_id, eof, eof)
 
   dat = messaging.new_message('roadCameraState')
   dat.roadCameraState = {
-    "frameId": image.frame,
-    "image": img.tobytes(),
-    "transform": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+    "frameId": frame,
+    "transform": [1.0, 0.0, 0.0,
+                  0.0, 1.0, 0.0,
+                  0.0, 0.0, 1.0]
   }
   pm.send('roadCameraState', dat)
   frame_id += 1
+
+
+def cam_callback(image):    
+  img = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
+  img = np.reshape(img, (H, W, 4))[:, :, [0, 1, 2]]
+  p = threading.Thread(target=publishRoadCameraState, args=(img, image.frame))
+  p.start()
+  p.join()
+
 
 def imu_callback(imu, vehicle_state):
   vehicle_state.bearing_deg = math.degrees(imu.compass)
@@ -83,6 +115,7 @@ def imu_callback(imu, vehicle_state):
   dat.sensorEvents[1].gyroUncalibrated.v = [imu.gyroscope.x, imu.gyroscope.y, imu.gyroscope.z]
   pm.send('sensorEvents', dat)
 
+
 def panda_state_function(exit_event: threading.Event):
   pm = messaging.PubMaster(['pandaStates'])
   while not exit_event.is_set():
@@ -96,6 +129,7 @@ def panda_state_function(exit_event: threading.Event):
     }
     pm.send('pandaStates', dat)
     time.sleep(0.5)
+
 
 def peripheral_state_function(exit_event: threading.Event):
   pm = messaging.PubMaster(['peripheralState'])
@@ -112,20 +146,21 @@ def peripheral_state_function(exit_event: threading.Event):
     pm.send('peripheralState', dat)
     time.sleep(0.5)
 
+
 def gps_callback(gps, vehicle_state):
   dat = messaging.new_message('gpsLocationExternal')
 
   # transform vel from carla to NED
   # north is -Y in CARLA
   velNED = [
-    -vehicle_state.vel.y, # north/south component of NED is negative when moving south
-    vehicle_state.vel.x, # positive when moving east, which is x in carla
+    -vehicle_state.vel.y,  # north/south component of NED is negative when moving south
+    vehicle_state.vel.x,  # positive when moving east, which is x in carla
     vehicle_state.vel.z,
   ]
 
   dat.gpsLocationExternal = {
     "timestamp": int(time.time() * 1000),
-    "flags": 1, # valid fix
+    "flags": 1,  # valid fix
     "accuracy": 1.0,
     "verticalAccuracy": 1.0,
     "speedAccuracy": 0.1,
@@ -141,8 +176,9 @@ def gps_callback(gps, vehicle_state):
 
   pm.send('gpsLocationExternal', dat)
 
+
 def fake_driver_monitoring(exit_event: threading.Event):
-  pm = messaging.PubMaster(['driverState','driverMonitoringState'])
+  pm = messaging.PubMaster(['driverState', 'driverMonitoringState'])
   while not exit_event.is_set():
     # dmonitoringmodeld output
     dat = messaging.new_message('driverState')
@@ -160,12 +196,15 @@ def fake_driver_monitoring(exit_event: threading.Event):
 
     time.sleep(DT_DMON)
 
+
 def can_function_runner(vs: VehicleState, exit_event: threading.Event):
   i = 0
   while not exit_event.is_set():
-    can_function(pm, vs.speed, vs.angle, i, vs.cruise_button, vs.is_engaged)
+    can_function(pm, vs.speed, vs.angle, i, vs.cruise_button, vs.is_engaged, vs.blinkers, vs.steering_pressed)
+    if vs.steering_pressed:
+      vs.steering_pressed = False
     time.sleep(0.01)
-    i+=1
+    i += 1
 
 
 def bridge(q):
@@ -190,8 +229,7 @@ def bridge(q):
   vehicle_bp = blueprint_library.filter('vehicle.tesla.*')[1]
   spawn_points = world_map.get_spawn_points()
   assert len(spawn_points) > args.num_selected_spawn_point, \
-    f'''No spawn point {args.num_selected_spawn_point}, try a value between 0 and
-    {len(spawn_points)} for this town.'''
+    f'''No spawn point {args.num_selected_spawn_point}, try a value between 0 and {len(spawn_points)} for this town.'''
   spawn_point = spawn_points[args.num_selected_spawn_point]
   vehicle = world.spawn_actor(vehicle_bp, spawn_point)
 
@@ -209,7 +247,8 @@ def bridge(q):
   blueprint = blueprint_library.find('sensor.camera.rgb')
   blueprint.set_attribute('image_size_x', str(W))
   blueprint.set_attribute('image_size_y', str(H))
-  blueprint.set_attribute('fov', '70')
+  # blueprint.set_attribute('fov', '70')
+  blueprint.set_attribute('focal_distance', str(FOCAL_LENGTH))
   blueprint.set_attribute('sensor_tick', '0.05')
   transform = carla.Transform(carla.Location(x=0.8, z=1.13))
   camera = world.spawn_actor(blueprint, transform, attach_to=vehicle)
@@ -244,7 +283,6 @@ def bridge(q):
   brake_ease_out_counter = REPEAT_COUNTER
   steer_ease_out_counter = REPEAT_COUNTER
 
-
   vc = carla.VehicleControl(throttle=0, steer=0, brake=0, reverse=False)
 
   is_openpilot_engaged = False
@@ -253,10 +291,9 @@ def bridge(q):
   throttle_manual = steer_manual = brake_manual = 0
 
   old_steer = old_brake = old_throttle = 0
-  throttle_manual_multiplier = 0.7 #keyboard signal is always 1
-  brake_manual_multiplier = 0.7 #keyboard signal is always 1
-  steer_manual_multiplier = 45 * STEER_RATIO  #keyboard signal is always 1
-
+  throttle_manual_multiplier = 0.7  # keyboard signal is always 1
+  brake_manual_multiplier = 0.7  # keyboard signal is always 1
+  steer_manual_multiplier = 45 * STEER_RATIO  # keyboard signal is always 1
 
   while 1:
     # 1. Read the throttle, steer and brake from op or manual controls
@@ -274,7 +311,7 @@ def bridge(q):
       m = message.split('_')
       if m[0] == "steer":
         steer_manual = float(m[1])
-        is_openpilot_engaged = False
+        vehicle_state.steering_pressed = True
       elif m[0] == "throttle":
         throttle_manual = float(m[1])
         is_openpilot_engaged = False
@@ -282,7 +319,7 @@ def bridge(q):
         brake_manual = float(m[1])
         is_openpilot_engaged = False
       elif m[0] == "reverse":
-        #in_reverse = not in_reverse
+        # in_reverse = not in_reverse
         cruise_button = CruiseButtons.CANCEL
         is_openpilot_engaged = False
       elif m[0] == "cruise":
@@ -295,6 +332,8 @@ def bridge(q):
         elif m[1] == "cancel":
           cruise_button = CruiseButtons.CANCEL
           is_openpilot_engaged = False
+      elif m[0] == "blinker":
+        vehicle_state.blinkers[m[1]] = not vehicle_state.blinkers[m[1]]
       elif m[0] == "quit":
         break
 
@@ -302,7 +341,7 @@ def bridge(q):
       steer_out = steer_manual * steer_manual_multiplier
       brake_out = brake_manual * brake_manual_multiplier
 
-      #steer_out = steer_out
+      # steer_out = steer_out
       # steer_out = steer_rate_limit(old_steer, steer_out)
       old_steer = steer_out
       old_throttle = throttle_out
@@ -325,24 +364,24 @@ def bridge(q):
       old_steer = steer_out
 
     else:
-      if throttle_out==0 and old_throttle>0:
-        if throttle_ease_out_counter>0:
+      if throttle_out == 0 and old_throttle > 0:
+        if throttle_ease_out_counter > 0:
           throttle_out = old_throttle
           throttle_ease_out_counter += -1
         else:
           throttle_ease_out_counter = REPEAT_COUNTER
           old_throttle = 0
 
-      if brake_out==0 and old_brake>0:
-        if brake_ease_out_counter>0:
+      if brake_out == 0 and old_brake > 0:
+        if brake_ease_out_counter > 0:
           brake_out = old_brake
           brake_ease_out_counter += -1
         else:
           brake_ease_out_counter = REPEAT_COUNTER
           old_brake = 0
 
-      if steer_out==0 and old_steer!=0:
-        if steer_ease_out_counter>0:
+      if steer_out == 0 and old_steer != 0:
+        if steer_ease_out_counter > 0:
           steer_out = old_steer
           steer_ease_out_counter += -1
         else:
@@ -353,26 +392,31 @@ def bridge(q):
 
     steer_carla = steer_out / (max_steer_angle * STEER_RATIO * -1)
 
-    steer_carla = np.clip(steer_carla, -1,1)
+    steer_carla = np.clip(steer_carla, -1, 1)
     steer_out = steer_carla * (max_steer_angle * STEER_RATIO * -1)
     old_steer = steer_carla * (max_steer_angle * STEER_RATIO * -1)
 
-    vc.throttle = throttle_out/0.6
+    vc.throttle = throttle_out / 0.6
     vc.steer = steer_carla
     vc.brake = brake_out
     vehicle.apply_control(vc)
 
     # --------------Step 3-------------------------------
     vel = vehicle.get_velocity()
-    speed = math.sqrt(vel.x**2 + vel.y**2 + vel.z**2) # in m/s
+    speed = math.sqrt(vel.x**2 + vel.y**2 + vel.z**2)  # in m/s
     vehicle_state.speed = speed
     vehicle_state.vel = vel
     vehicle_state.angle = steer_out
     vehicle_state.cruise_button = cruise_button
     vehicle_state.is_engaged = is_openpilot_engaged
 
-    if rk.frame%PRINT_DECIMATION == 0:
-      print("frame: ", "engaged:", is_openpilot_engaged, "; throttle: ", round(vc.throttle, 3), "; steer(c/deg): ", round(vc.steer, 3), round(steer_out, 3), "; brake: ", round(vc.brake, 3))
+    if rk.frame % PRINT_DECIMATION == 0:
+      print("frame: ", "engaged:", is_openpilot_engaged,
+        "; throttle: ", round(vc.throttle, 3),
+        "; steer(c/deg): ", round(vc.steer, 3), round(steer_out, 3),
+        "; brake: ", round(vc.brake, 3),
+        "; blinkers: ", vehicle_state.blinkers,
+        "; steering_pressed: ", vehicle_state.steering_pressed)
 
     rk.keep_time()
 
@@ -385,6 +429,7 @@ def bridge(q):
   camera.destroy()
   vehicle.destroy()
 
+
 def bridge_keep_alive(q: Any):
   while 1:
     try:
@@ -392,6 +437,7 @@ def bridge_keep_alive(q: Any):
       break
     except RuntimeError:
       print("Restarting bridge...")
+
 
 if __name__ == "__main__":
   # make sure params are in a good state
@@ -401,6 +447,10 @@ if __name__ == "__main__":
   msg.liveCalibration.validBlocks = 20
   msg.liveCalibration.rpyCalib = [0.0, 0.0, 0.0]
   Params().put("CalibrationParams", msg.to_bytes())
+  if args.laneless:
+    Params().put_bool("EndToEndToggle", True)
+  else:
+    Params().put_bool("EndToEndToggle", False)
 
   q: Any = Queue()
   p = Process(target=bridge_keep_alive, args=(q,), daemon=True)
