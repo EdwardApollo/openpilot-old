@@ -22,7 +22,7 @@ void dmonitoring_init(DMonitoringModelState* s) {
 #ifdef USE_ONNX_MODEL
   s->m = new ONNXModel("../../models/dmonitoring_model.onnx", &s->output[0], OUTPUT_SIZE, USE_DSP_RUNTIME);
 #else
-  s->m = new SNPEModel("../../models/dmonitoring_model_q.dlc", &s->output[0], OUTPUT_SIZE, USE_DSP_RUNTIME);
+  s->m = new SNPEModel("../../models/dmonitoring_model_features.dlc", &s->output[1], OUTPUT_SIZE, USE_GPU_RUNTIME);
 #endif
 }
 

@@ -93,6 +93,7 @@ SNPEModel::SNPEModel(const char *path, float *loutput, size_t loutput_size, int 
   {
     const zdl::DlSystem::TensorShape& bufferShape = snpe->getInputOutputBufferAttributes(output_tensor_name)->getDims();
     if (output_size != 0) {
+      printf("there you go Weixing %lu\n", bufferShape[1]);
       assert(output_size == bufferShape[1]);
     } else {
       output_size = bufferShape[1];
