@@ -21,7 +21,7 @@ class CarState(CarStateBase):
     ret = car.CarState.new_message()
     ret.wheelSpeeds.fl = -cp.vl['BODY_SENSOR']['SPEED_L']
     ret.wheelSpeeds.fr = cp.vl['BODY_SENSOR']['SPEED_R']
-    ret.standstill = abs(cp.vl['BODY_SENSOR']['SPEED_L']) > 10 or abs(cp.vl['BODY_SENSOR']['SPEED_R']) > 10
+    ret.standstill = not ( abs(cp.vl['BODY_SENSOR']['SPEED_L']) > 10 or abs(cp.vl['BODY_SENSOR']['SPEED_R']) > 10)
     return ret
 
   @staticmethod

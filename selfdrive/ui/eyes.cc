@@ -32,8 +32,10 @@ public:
           QPixmap p("moving.png");
           l->setPixmap(p.scaled(QSize(2160, 1080)));
         }
+        update();
       }
     });
+    timer->start();
   };
 
 private:
