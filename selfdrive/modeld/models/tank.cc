@@ -10,7 +10,7 @@ void tankmodel_init(TankModelState* s) {
   s->m = new SNPEModel("../../models/tankmodel.dlc", &s->output[0], OUTPUT_SIZE, USE_DSP_RUNTIME);
 }
 
-TankModelResult dmonitoring_eval_frame(TankModelState* s, void* stream_buf, int width, int height) {
+TankModelResult tankmodel_eval_frame(TankModelState* s, void* stream_buf, int width, int height) {
   for (int w=0; w<WIDTH; w++) {
     for (int h=0; h<HEIGHT; h++) {
       for (int c=0; c<CHANNELS; c++) {
@@ -31,6 +31,6 @@ TankModelResult dmonitoring_eval_frame(TankModelState* s, void* stream_buf, int 
   return ret
 }
 
-void dmonitoring_free(TankModelState* s) {
+void tankmodel_free(TankModelState* s) {
   delete s->m;
 }

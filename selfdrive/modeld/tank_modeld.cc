@@ -10,7 +10,7 @@
 
 ExitHandler do_exit;
 
-void run_model(DMonitoringModelState &model, VisionIpcClient &vipc_client) {
+void run_model(TankModelState &model, VisionIpcClient &vipc_client) {
   PubMaster pm({"sendcan"});
   double last = 0;
 
@@ -20,7 +20,7 @@ void run_model(DMonitoringModelState &model, VisionIpcClient &vipc_client) {
     if (buf == nullptr) continue;
 
     double t1 = millis_since_boot();
-    // DMonitoringResult res = dmonitoring_eval_frame(&model, buf->addr, buf->width, buf->height);
+    TankModelResult res = tankmodel_eval_frame(&model, buf->addr, buf->width, buf->height);
     double t2 = millis_since_boot();
 
     // send dm packet
@@ -35,8 +35,8 @@ int main(int argc, char **argv) {
   setpriority(PRIO_PROCESS, 0, -15);
 
   // init the models
-  // DMonitoringModelState model;
-  // dmonitoring_init(&model);
+  TankModelState model;
+  tankmodel_init(&model);
 
   VisionIpcClient vipc_client = VisionIpcClient("camerad", VISION_STREAM_RGB_WIDE, true);
   while (!do_exit && !vipc_client.connect(false)) {
@@ -46,9 +46,9 @@ int main(int argc, char **argv) {
   // run the models
   if (vipc_client.connected) {
     LOGW("connected with buffer size: %d", vipc_client.buffers[0].len);
-    // run_model(model, vipc_client);
+    run_model(model, vipc_client);
   }
 
-  // dmonitoring_free(&model);
+  tankmodel_free(&model);
   return 0;
 }
