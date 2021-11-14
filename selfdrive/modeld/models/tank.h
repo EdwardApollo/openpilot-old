@@ -22,7 +22,6 @@ typedef struct TankModelState {
   RunModel *m;
   float net_input_buf[INPUT_SIZE];
   float output[OUTPUT_SIZE];
-  std::vector<float> net_input_buf;
 } TankModelState;
 
 void tankmodel_init(TankModelState* s);
