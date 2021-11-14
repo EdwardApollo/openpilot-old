@@ -49,16 +49,20 @@ def modelcontrol():
   sm = messaging.SubMaster(['driverState'])
   running_bump_prob = 0
 
-  while True:
-    sm.update()
-    bump_prob = sm['driverState'].occludedProb
-    running_bump_prob = .8 * running_bump_prob + .2 * bump_prob
-    print(bump_prob, running_bump_prob)
+  try:
+    while True:
+      sm.update()
+      bump_prob = sm['driverState'].occludedProb
+      running_bump_prob = .8 * running_bump_prob + .2 * bump_prob
+      print(bump_prob, running_bump_prob)
 
-    if bump_prob > .5:
-      send_cmd(pm, packer, 100, -100)
-    else:
-      send_cmd(pm, packer, 100, 100)
+      if bump_prob > .5:
+        send_cmd(pm, packer, 100, -100)
+      else:
+        send_cmd(pm, packer, 100, 100)
+  except KeyboardInterrupt:
+    send_cmd(pm, packer, 0, 0)
+    raise
 
 
 # Entry point
