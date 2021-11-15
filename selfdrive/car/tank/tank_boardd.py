@@ -62,8 +62,12 @@ class EV3:
       struct.pack('<h', local_mem*1024 + global_mem),
       ops
     ])
-    self.device.write(EP_OUT, cmd, 100)
-    self.device.read(EP_IN, 1024, 100)
+    try:
+      self.device.write(EP_OUT, cmd, 100)
+      self.device.read(EP_IN, 1024, 100)
+    except BaseException:
+      pass
+
 
 
 # Generate comands
@@ -111,13 +115,17 @@ if __name__ == '__main__':
                                 ("SPEED_RIGHT", "TANK_COMMAND", 0)], [("TANK_COMMAND", 5)])
   ev3 = EV3()
 
-  while 1:
-    can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
-    cp.update_strings(can_strs)
-    if cp.can_valid:
-      speed_left = int(cp.vl['TANK_COMMAND']['SPEED_LEFT'])
-      speed_right = int(cp.vl['TANK_COMMAND']['SPEED_RIGHT'])
-      if speed_left != 0 and speed_right != 0:
-        ev3.send_cmd(start(speed_left, speed_right))
-      else:
-        ev3.send_cmd(stop())
+  try:
+    while 1:
+      can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
+      cp.update_strings(can_strs)
+      if cp.can_valid:
+        speed_left = int(cp.vl['TANK_COMMAND']['SPEED_LEFT'])
+        speed_right = int(cp.vl['TANK_COMMAND']['SPEED_RIGHT'])
+        if speed_left != 0 and speed_right != 0:
+          ev3.send_cmd(start(speed_left, speed_right))
+        else:
+          ev3.send_cmd(stop())
+  except KeyboardInterrupt:
+    ev3.send_cmd(stop())
+    raise
