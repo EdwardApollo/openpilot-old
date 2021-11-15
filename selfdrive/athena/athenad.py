@@ -19,6 +19,8 @@ import requests
 from jsonrpc import JSONRPCResponseManager, dispatcher
 from websocket import ABNF, WebSocketTimeoutException, WebSocketException, create_connection
 
+from selfdrive.athena.streamer import start_streamer, kick_streamer, AthenaSignaling
+
 import cereal.messaging as messaging
 from cereal.services import service_list
 from common.api import Api
@@ -351,6 +353,19 @@ def takeSnapshot():
   else:
     raise Exception("not available while camerad is started")
 
+webrtc_signaling = AthenaSignaling()
+@dispatcher.add_method
+def startWebRtcStream(offer):
+  print(f"got offer: {offer}")
+  webrtc_signaling.push(offer)
+
+  threading.Thread(target=start_streamer, args=(webrtc_signaling,)).start()
+
+  answer = None
+  while answer is None:
+    answer = webrtc_signaling.pop()
+
+  return {"answer": answer}
 
 def get_logs_to_send_sorted():
   # TODO: scan once then use inotify to detect file creation/deletion
