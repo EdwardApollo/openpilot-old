@@ -25,7 +25,7 @@ public:
       sm.update(0);
       // scale volume with speed
       if (sm.updated("driverState")) {
-        if (sm["driverState"].getPoorVision() < 0.5) {
+        if (sm["driverState"].getDriverState().getPoorVision() < 0.5) {
           QPixmap p("sleeping.png");
           l->setPixmap(p.scaled(QSize(2160, 1080)));
         } else {
