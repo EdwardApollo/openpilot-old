@@ -177,7 +177,7 @@ DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_
   rewind (pFile);
 
 
-  float cthresh = 1.32;
+  float cthresh = 1.8;
   // allocate memory to contain the whole file:
   virtualchris = (float*) malloc (sizeof(float)*lSize);
   if (virtualchris == NULL) {fputs ("Memory error",stderr); exit (2);}
@@ -217,6 +217,7 @@ DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_
     chrisdistance += powf( no - virtualchris[i], 2);
   }
 
+  printf("distance %f \n", chrisdistance);
   if (chrisdistance < cthresh) {printf("This is Chris!\n"); ischris=1;}
   //printf("%f\n", chrisdistance);
 
