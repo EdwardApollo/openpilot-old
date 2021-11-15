@@ -11,7 +11,7 @@
 #define WIDTH 1928
 #define HEIGHT 1208
 #define CHANNELS 3
-#define INPUT_SIZE (WIDTH / 2 * HEIGHT / 2 * CHANNELS)
+#define INPUT_SIZE (WIDTH / 4 * HEIGHT / 4 * CHANNELS)
 
 typedef struct TankModelResult {
   float bump_prob;
