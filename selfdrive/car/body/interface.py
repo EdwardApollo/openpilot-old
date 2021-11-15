@@ -17,11 +17,11 @@ packer = CANPacker("comma_body")
 
 from selfdrive.car.interfaces import CarStateBase
 class CarState(CarStateBase):
-  def update(self, cp):
+  def update(self, cp, v_ego):
     ret = car.CarState.new_message()
     ret.wheelSpeeds.fl = -cp.vl['BODY_SENSOR']['SPEED_L']
     ret.wheelSpeeds.fr = cp.vl['BODY_SENSOR']['SPEED_R']
-    ret.standstill = not ( abs(cp.vl['BODY_SENSOR']['SPEED_L']) > 10 or abs(cp.vl['BODY_SENSOR']['SPEED_R']) > 10)
+    ret.standstill = abs(v_ego) < 100
     return ret
 
   @staticmethod
@@ -30,9 +30,9 @@ class CarState(CarStateBase):
                                     ("SPEED_R", "BODY_SENSOR", 0)], [], enforce_checks=False)
 
 class CarInterface(CarInterfaceBase):
-  def update(self, c, can_strings):
+  def update(self, c, can_strings, v_ego):
     self.cp.update_strings(can_strings)
-    ret = self.CS.update(self.cp)
+    ret = self.CS.update(self.cp, v_ego)
 
     self.CS.out = ret.as_reader()
     return self.CS.out
@@ -91,6 +91,7 @@ if __name__ == "__main__":
   time = 0.0
   torque_a_filt = 0.0
   torque_b_filt = 0.0
+  v_ego = 0.0
   while 1:
     time += dt
     sm.update()
@@ -130,7 +131,7 @@ if __name__ == "__main__":
     last_err = err
 
     can_strs = messaging.drain_sock_raw(can_sock, wait_for_one=False)
-    cs = ci.update(None, can_strs)
+    cs = ci.update(None, can_strs, v_ego)
     #car_events = self.events.to_msg()
     cs_send = messaging.new_message('carState')
     #cs_send.valid = CS.canValid
@@ -139,6 +140,8 @@ if __name__ == "__main__":
     pm.send('carState', cs_send)
 
     measured_speed = 0.5 * (cs.wheelSpeeds.fl + cs.wheelSpeeds.fr)
+    v_ego_alpha = .03
+    v_ego = (1.0 - v_ego_alpha) * v_ego + alpha * measured_speed
     measured_steer = -cs.wheelSpeeds.fl + cs.wheelSpeeds.fr
 
     ret = car.CarControl.new_message()

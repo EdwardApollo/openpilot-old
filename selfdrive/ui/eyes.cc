@@ -26,11 +26,9 @@ public:
       // scale volume with speed
       if (sm.updated("carState")) {
         if (sm["carState"].getCarState().getStandstill()) {
-          QPixmap p("sleeping.png");
-          l->setPixmap(p.scaled(QSize(2160, 1080)));
+          if (l->pixmap()->toImage() != sleeping.toImage()) l->setPixmap(sleeping);
         } else {
-          QPixmap p("moving.png");
-          l->setPixmap(p.scaled(QSize(2160, 1080)));
+          if (l->pixmap()->toImage() != moving.toImage()) l->setPixmap(moving);
         }
         update();
       }
@@ -40,6 +38,8 @@ public:
 
 private:
   SubMaster sm;
+  QPixmap sleeping = QPixmap("eyes.png").scaled(2160, 1080);
+  QPixmap moving = QPixmap("moving.png").scaled(2160, 1080);
 };
 
 int main(int argc, char *argv[]) {
