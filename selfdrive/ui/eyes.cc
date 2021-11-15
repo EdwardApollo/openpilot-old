@@ -29,7 +29,7 @@ public:
           QPixmap p("sleeping.png");
           l->setPixmap(p.scaled(QSize(2160, 1080)));
         } else {
-          QPixmap p("moving.png");
+          QPixmap p("eyes.png");
           l->setPixmap(p.scaled(QSize(2160, 1080)));
         }
         update();
