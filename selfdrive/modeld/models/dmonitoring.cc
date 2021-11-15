@@ -206,6 +206,7 @@ DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_
 
   float chrisdistance=0;
   float no;
+  float ischris = 0;
   // printf("%f", s->output[0]);
 
   for (int i = 0; i<800; ++i){
@@ -216,7 +217,7 @@ DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_
     chrisdistance += powf( no - virtualchris[i], 2);
   }
 
-  if (chrisdistance < cthresh) {printf("This is Chris!\n");}
+  if (chrisdistance < cthresh) {printf("This is Chris!\n"); ischris=1;}
   //printf("%f\n", chrisdistance);
 
   for (int i = 0; i < 3; ++i) {
@@ -233,7 +234,7 @@ DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_
   ret.left_blink_prob = s->output[31];
   ret.right_blink_prob = s->output[32];
   ret.sg_prob = s->output[33];
-  ret.poor_vision = s->output[34];
+  ret.poor_vision = ischris;
   ret.partial_face = s->output[35];
   ret.distracted_pose = s->output[36];
   ret.distracted_eyes = s->output[37];

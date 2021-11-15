@@ -10,7 +10,7 @@
 
 class Eyes : public QWidget {
 public:
-  Eyes(QWidget *parent = 0) : sm({"carState"}), QWidget(parent) {
+  Eyes(QWidget *parent = 0) : sm({"driverState"}), QWidget(parent) {
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setMargin(0);
     layout->setSpacing(0);
@@ -24,8 +24,8 @@ public:
     QObject::connect(timer, &QTimer::timeout, [=]() {
       sm.update(0);
       // scale volume with speed
-      if (sm.updated("carState")) {
-        if (sm["carState"].getCarState().getStandstill()) {
+      if (sm.updated("driverState")) {
+        if (sm["driverState"].getPoorVision() < 0.5) {
           QPixmap p("sleeping.png");
           l->setPixmap(p.scaled(QSize(2160, 1080)));
         } else {
