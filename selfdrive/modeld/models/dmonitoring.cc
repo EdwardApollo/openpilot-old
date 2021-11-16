@@ -53,6 +53,7 @@ void crop_yuv(uint8_t *raw, int width, int height, uint8_t *y, uint8_t *u, uint8
 }
 
 DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_buf, int width, int height) {
+  static int run_idx = 0;
   Rect crop_rect;
   if (Hardware::TICI()) {
     const int full_width_tici = 1928;
@@ -158,6 +159,22 @@ DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_
   //fwrite(net_input_buf, MODEL_HEIGHT*MODEL_WIDTH*3/2, sizeof(float), dump_yuv_file2);
   //fclose(dump_yuv_file2);
 
+  FILE *pFile;
+  long lSize;
+  size_t result;
+
+  char in_fn[128];
+  int n;
+  int file_idx = run_idx % 1200;
+  n = sprintf(in_fn, "/data/runner_test/in_%d", file_idx);
+  pFile = fopen(in_fn, "rb");
+  fseek (pFile , 0 , SEEK_END);
+  lSize = ftell (pFile);
+  rewind (pFile);
+  result = fread (net_input_buf,1,lSize,pFile);
+  fclose (pFile);
+
+  printf("running %d, buf size %d, got size %ld\n", file_idx, yuv_buf_len, lSize / 4);
   double t1 = millis_since_boot();
   s->m->execute(net_input_buf, yuv_buf_len);
   double t2 = millis_since_boot();
@@ -183,6 +200,16 @@ DMonitoringResult dmonitoring_eval_frame(DMonitoringModelState* s, void* stream_
   ret.distracted_eyes = s->output[37];
   ret.occluded_prob = s->output[38];
   ret.dsp_execution_time = (t2 - t1) / 1000.;
+
+  printf("writing results %d\n", file_idx);
+  char out_fn[128];
+  n = sprintf(out_fn, "/data/runner_test/dev_qdlc_out/out_%d", file_idx);
+  FILE *res_file = fopen(out_fn, "wb");
+  fwrite(s->output, 39, sizeof(float), res_file);
+  fclose(res_file);
+
+  run_idx++;
+
   return ret;
 }
 
