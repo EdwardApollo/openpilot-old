@@ -89,8 +89,9 @@ class LatControlINDI():
       self.delta_u = 0
     else:
       # Update effectiveness based on previous change and measured rate
-      self.G = self.G - self.mu * (self.G * self.delta_u - self.x[1])
-      self.G = clip(self.G, MIN_G, MAX_G)
+      if not CS.steeringPressed:
+        self.G = self.G - self.mu * (self.G * self.delta_u - self.x[1])
+        self.G = clip(self.G, MIN_G, MAX_G)
 
       # Expected actuator value
       self.steer_filter.update(self.output_steer)
