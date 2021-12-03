@@ -12,6 +12,7 @@ from selfdrive.controls.lib.drive_helpers import get_steer_max
 DEFAULT_G = 5.0
 MAX_G = 7.5
 MIN_G = 2.5
+KP = 5.0
 
 
 class LatControlINDI():
@@ -98,7 +99,7 @@ class LatControlINDI():
 
       # Compute desired change in actuator
       angle_error = steers_des - self.x[0]
-      self.delta_u = angle_error / self.G
+      self.delta_u = KP * angle_error / self.G
 
       # If steering pressed, only allow wind down
       if CS.steeringPressed and (self.delta_u * self.output_steer > 0):
