@@ -10,7 +10,7 @@ from selfdrive.car.toyota.values import CarControllerParams
 from selfdrive.controls.lib.drive_helpers import get_steer_max
 
 DEFAULT_G = 5.0
-MAX_G = 7.5
+MAX_G = 10.0
 MIN_G = 2.5
 KP = 5.0
 
