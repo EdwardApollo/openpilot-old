@@ -349,7 +349,7 @@ bool send_panda_states(PubMaster *pm, const std::vector<Panda *> &pandas, bool s
 
     auto ps = pss[i];
     ps.setUptime(pandaState.uptime);
-    ps.setIgnitionLine(pandaState.ignition_line);
+    ps.setIgnitionLine(ignition_local);
     ps.setIgnitionCan(pandaState.ignition_can);
     ps.setControlsAllowed(pandaState.controls_allowed);
     ps.setGasInterceptorDetected(pandaState.gas_interceptor_detected);
