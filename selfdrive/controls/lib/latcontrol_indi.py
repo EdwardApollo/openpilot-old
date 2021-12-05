@@ -41,7 +41,7 @@ class LatControlINDI():
     self.sat_count_rate = 1.0 * DT_CTRL
     self.sat_limit = CP.steerLimitTimer
     self.steer_filter = FirstOrderFilter(0., 2.0 * CP.steerActuatorDelay, DT_CTRL)
-    self.steer_pressed_filter = FirstOrderFilter(0., 1.0, DT_CTRL)
+    self.steer_pressed_filter = FirstOrderFilter(0., 0.5, DT_CTRL)
     self.mu = 0.1
 
     self.reset()
