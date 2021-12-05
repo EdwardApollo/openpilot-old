@@ -11,7 +11,7 @@ from selfdrive.controls.lib.drive_helpers import get_steer_max
 
 DEFAULT_G = 0.25
 MAX_G = 2.0
-MIN_G = 0.05
+MIN_G = 0.1
 
 class LatControlINDI():
   def __init__(self, CP):
@@ -42,7 +42,7 @@ class LatControlINDI():
     self.sat_limit = CP.steerLimitTimer
     self.steer_filter = FirstOrderFilter(0., 2.0 * CP.steerActuatorDelay, DT_CTRL)
     self.steer_pressed_filter = FirstOrderFilter(0., 1.0, DT_CTRL)
-    self.mu = 0.05
+    self.mu = 0.1
 
     self.reset()
 
