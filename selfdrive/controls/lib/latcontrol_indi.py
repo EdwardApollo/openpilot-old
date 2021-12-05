@@ -51,7 +51,6 @@ class LatControlINDI():
     self.steer_pressed_filter.x = 0.
     self.output_steer = 0.
     self.sat_count = 0.
-    self.delta_u = 0
     self.G = DEFAULT_G
 
   def _check_saturation(self, control, check_saturation, limit):
@@ -88,7 +87,6 @@ class LatControlINDI():
       self.output_steer = 0.0
       self.steer_filter.x = 0.0
       self.steer_pressed_filter.x = 0.
-      self.delta_u = 0
     else:
       # Expected actuator value
       steer_filter_prev_x = self.steer_filter.x
@@ -107,31 +105,28 @@ class LatControlINDI():
 
       # Compute desired change in actuator
       angle_error = steers_des - self.x[0]
-      self.delta_u = angle_error / self.G
+      delta_u = angle_error / self.G
 
       # If steering pressed, only allow wind down
-      if CS.steeringPressed and (self.delta_u * self.output_steer > 0):
-        self.delta_u = 0
+      if CS.steeringPressed and (delta_u * self.output_steer > 0):
+        delta_u = 0
 
       # Enforce rate limit
       if self.enforce_rate_limit:
         steer_max = float(CarControllerParams.STEER_MAX)
-        new_output_steer_cmd = steer_max * (self.steer_filter.x + self.delta_u)
+        new_output_steer_cmd = steer_max * (self.steer_filter.x + delta_u)
         prev_output_steer_cmd = steer_max * self.output_steer
         new_output_steer_cmd = apply_toyota_steer_torque_limits(new_output_steer_cmd, prev_output_steer_cmd, prev_output_steer_cmd, CarControllerParams)
-
-        # Compute actual output_steer and delta_u after applying rate limit
         self.output_steer = new_output_steer_cmd / steer_max
-        self.delta_u = self.output_steer - self.steer_filter.x
       else:
-        self.output_steer = self.steer_filter.x + self.delta_u
+        self.output_steer = self.steer_filter.x + delta_u
 
       steers_max = get_steer_max(CP, CS.vEgo)
       self.output_steer = clip(self.output_steer, -steers_max, steers_max)
 
       indi_log.active = True
       indi_log.delayedOutput = float(self.steer_filter.x)
-      indi_log.delta = float(self.delta_u)
+      indi_log.delta = float(delta_u)
       indi_log.output = float(self.output_steer)
 
       check_saturation = (CS.vEgo > 10.) and not CS.steeringRateLimited and not CS.steeringPressed
