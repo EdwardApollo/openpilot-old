@@ -10,8 +10,8 @@ from selfdrive.car.toyota.values import CarControllerParams
 from selfdrive.controls.lib.drive_helpers import get_steer_max
 
 DEFAULT_G = 0.25
-MAX_G = 1.0
-MIN_G = 0.1
+MAX_G = 2.0
+MIN_G = 0.05
 
 class LatControlINDI():
   def __init__(self, CP):
@@ -41,12 +41,14 @@ class LatControlINDI():
     self.sat_count_rate = 1.0 * DT_CTRL
     self.sat_limit = CP.steerLimitTimer
     self.steer_filter = FirstOrderFilter(0., 2.0 * CP.steerActuatorDelay, DT_CTRL)
-    self.mu = 0.1
+    self.steer_pressed_filter = FirstOrderFilter(0., 1.0, DT_CTRL)
+    self.mu = 0.05
 
     self.reset()
 
   def reset(self):
     self.steer_filter.x = 0.
+    self.steer_pressed_filter.x = 0.
     self.output_steer = 0.
     self.sat_count = 0.
     self.delta_u = 0
@@ -85,14 +87,20 @@ class LatControlINDI():
       indi_log.active = False
       self.output_steer = 0.0
       self.steer_filter.x = 0.0
+      self.steer_pressed_filter.x = 0.
       self.delta_u = 0
     else:
       # Expected actuator value
       steer_filter_prev_x = self.steer_filter.x
       self.steer_filter.update(self.output_steer)
 
+      if CS.steeringPressed:
+        self.steer_pressed_filter.x = 1
+      else:
+        self.steer_pressed_filter.update(0)
+
       # Update effectiveness based on rate of change in control and angle
-      if not CS.steeringPressed:
+      if self.steer_pressed_filter.x < 0.5:
         delta_u = (self.steer_filter.x - steer_filter_prev_x) / DT_CTRL
         self.G = self.G - self.mu * (self.G * delta_u - self.x[1]) * delta_u
         self.G = clip(self.G, MIN_G, MAX_G)
@@ -122,12 +130,14 @@ class LatControlINDI():
       self.output_steer = clip(self.output_steer, -steers_max, steers_max)
 
       indi_log.active = True
-      indi_log.rateSetPoint = float(self.G)  # HACK
       indi_log.delayedOutput = float(self.steer_filter.x)
       indi_log.delta = float(self.delta_u)
       indi_log.output = float(self.output_steer)
 
       check_saturation = (CS.vEgo > 10.) and not CS.steeringRateLimited and not CS.steeringPressed
       indi_log.saturated = self._check_saturation(self.output_steer, check_saturation, steers_max)
+
+    indi_log.accelError = float(self.G)  # HACK
+    indi_log.accelSetPoint = float(self.steer_pressed_filter.x)  # HACK
 
     return float(self.output_steer), float(steers_des), indi_log
