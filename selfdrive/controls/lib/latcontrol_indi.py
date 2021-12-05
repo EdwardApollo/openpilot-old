@@ -9,11 +9,9 @@ from selfdrive.car import apply_toyota_steer_torque_limits
 from selfdrive.car.toyota.values import CarControllerParams
 from selfdrive.controls.lib.drive_helpers import get_steer_max
 
-DEFAULT_G = 5.0
-MAX_G = 10.0
-MIN_G = 2.5
-KP = 5.0
-
+DEFAULT_G = 0.25
+MAX_G = 1.0
+MIN_G = 0.1
 
 class LatControlINDI():
   def __init__(self, CP):
@@ -89,17 +87,19 @@ class LatControlINDI():
       self.steer_filter.x = 0.0
       self.delta_u = 0
     else:
-      # Update effectiveness based on previous change and measured rate
-      if not CS.steeringPressed:
-        self.G = self.G - self.mu * (self.G * self.delta_u - self.x[1])
-        self.G = clip(self.G, MIN_G, MAX_G)
-
       # Expected actuator value
+      steer_filter_prev_x = self.steer_filter.x
       self.steer_filter.update(self.output_steer)
+
+      # Update effectiveness based on rate of change in control and angle
+      if not CS.steeringPressed:
+        delta_u = (self.steer_filter.x - steer_filter_prev_x) / DT_CTRL
+        self.G = self.G - self.mu * (self.G * delta_u - self.x[1]) * delta_u
+        self.G = clip(self.G, MIN_G, MAX_G)
 
       # Compute desired change in actuator
       angle_error = steers_des - self.x[0]
-      self.delta_u = KP * angle_error / self.G
+      self.delta_u = angle_error / self.G
 
       # If steering pressed, only allow wind down
       if CS.steeringPressed and (self.delta_u * self.output_steer > 0):
