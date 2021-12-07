@@ -1,3 +1,6 @@
+from collections import deque
+
+
 class FirstOrderFilter:
   # first order filter
   def __init__(self, x0, rc, dt, initialized=True):
@@ -16,3 +19,22 @@ class FirstOrderFilter:
       self.initialized = True
       self.x = x
     return self.x
+
+
+class Delay:
+  def __init__(self, x0, rc, dt):
+    self.n = int(rc / dt)
+    self.reset(x0)
+
+  @property
+  def x(self):
+    return self.q[0]
+
+  def reset(self, x0):
+    self.q = deque([x0] * self.n, maxlen=self.n)
+
+  def update(self, x):
+    ret = self.q[0]
+    self.q.append(x)
+
+    return ret

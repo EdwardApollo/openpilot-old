@@ -2,16 +2,16 @@ import math
 import numpy as np
 
 from cereal import log
-from common.filter_simple import FirstOrderFilter
+from common.filter_simple import FirstOrderFilter, Delay
 from common.numpy_fast import clip
 from common.realtime import DT_CTRL
 from selfdrive.car import apply_toyota_steer_torque_limits
 from selfdrive.car.toyota.values import CarControllerParams
 from selfdrive.controls.lib.drive_helpers import get_steer_max
 
-DEFAULT_G = 0.25
-MAX_G = 2.0
-MIN_G = 0.1
+DEFAULT_G = 0.15
+MAX_G = 1.0
+MIN_G = 0.025
 
 class LatControlINDI():
   def __init__(self, CP):
@@ -40,9 +40,14 @@ class LatControlINDI():
 
     self.sat_count_rate = 1.0 * DT_CTRL
     self.sat_limit = CP.steerLimitTimer
+
+    # Actuator is modeled as a pure delay, followed by a first
+    # order filter. Both with a time constant of CP.steerActuatorDelay
+    self.steer_delay = Delay(0, CP.steerActuatorDelay, DT_CTRL)
     self.steer_filter = FirstOrderFilter(0., CP.steerActuatorDelay, DT_CTRL)
+
     self.steer_pressed_filter = FirstOrderFilter(0., 0.5, DT_CTRL)
-    self.mu = 0.1
+    self.mu = 0.01
 
     self.reset()
 
@@ -52,6 +57,7 @@ class LatControlINDI():
     self.output_steer = 0.
     self.sat_count = 0.
     self.G = DEFAULT_G
+    self.active_count = 0
 
   def _check_saturation(self, control, check_saturation, limit):
     saturated = abs(control) == limit
@@ -86,11 +92,14 @@ class LatControlINDI():
       indi_log.active = False
       self.output_steer = 0.0
       self.steer_filter.x = 0.0
+      self.steer_delay.reset(0)
       self.steer_pressed_filter.x = 0.
+      self.active_count = 0
     else:
-      # Expected actuator value
+      # Update actuator model with last steering output
       steer_filter_prev_x = self.steer_filter.x
-      self.steer_filter.update(self.output_steer)
+      self.steer_filter.update(self.steer_delay.update(self.output_steer))
+      self.active_count += 1
 
       if CS.steeringPressed:
         self.steer_pressed_filter.x = 1
@@ -98,8 +107,12 @@ class LatControlINDI():
         self.steer_pressed_filter.update(0)
 
       # Update effectiveness based on rate of change in control and angle
-      if self.steer_pressed_filter.x < 0.5:
+      pressed = self.steer_pressed_filter.x > 0.5
+      engage_cooldown = self.active_count > 10 * self.steer_delay.n
+      saturated = abs(self.output_steer) > 0.9
+      if (not pressed) and engage_cooldown and (not saturated):
         delta_u = (self.steer_filter.x - steer_filter_prev_x) / DT_CTRL
+        indi_log.accelSetPoint = float(delta_u)  # HACK
         self.G = self.G - self.mu * (self.G * delta_u - self.x[1]) * delta_u
         self.G = clip(self.G, MIN_G, MAX_G)
 
@@ -123,6 +136,7 @@ class LatControlINDI():
 
       steers_max = get_steer_max(CP, CS.vEgo)
       self.output_steer = clip(self.output_steer, -steers_max, steers_max)
+      delta_u = self.output_steer - self.steer_filter.x
 
       indi_log.active = True
       indi_log.delayedOutput = float(self.steer_filter.x)
@@ -133,6 +147,5 @@ class LatControlINDI():
       indi_log.saturated = self._check_saturation(self.output_steer, check_saturation, steers_max)
 
     indi_log.accelError = float(self.G)  # HACK
-    indi_log.accelSetPoint = float(self.steer_pressed_filter.x)  # HACK
 
     return float(self.output_steer), float(steers_des), indi_log
