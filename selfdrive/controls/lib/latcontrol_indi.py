@@ -48,6 +48,7 @@ class LatControlINDI():
 
     self.steer_pressed_filter = FirstOrderFilter(0., 0.5, DT_CTRL)
     self.mu = 0.01
+    self.G = DEFAULT_G
 
     self.reset()
 
@@ -56,7 +57,6 @@ class LatControlINDI():
     self.steer_pressed_filter.x = 0.
     self.output_steer = 0.
     self.sat_count = 0.
-    self.G = DEFAULT_G
     self.active_count = 0
 
   def _check_saturation(self, control, check_saturation, limit):
