@@ -19,6 +19,7 @@ from numpy.linalg import solve
 
 from cereal import car
 
+# On earth ranges between 9.807 and 9.789, 99% accuracy is enough for vehicle model
 ACCELERATION_DUE_TO_GRAVITY = 9.8
 
 

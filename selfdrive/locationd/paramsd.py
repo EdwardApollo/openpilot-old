@@ -45,12 +45,12 @@ class ParamsLearner:
       yaw_rate_std = msg.angularVelocityCalibrated.std[2]
 
       localizer_roll = msg.orientationNED.value[0]
+      # TODO: calculate std for NED orientation and use for validity check
       roll_valid = msg.orientationNED.valid and ROLL_MIN < localizer_roll < ROLL_MAX
       if roll_valid:
         roll = localizer_roll
         roll_std = np.radians(1.0)
       else:
-        # This is done to bound the road roll estimate when localizer values are invalid
         roll = 0.0
         roll_std = np.radians(10.0)
       self.roll = clip(roll, self.roll - ROLL_MAX_DELTA, self.roll + ROLL_MAX_DELTA)
@@ -68,6 +68,7 @@ class ParamsLearner:
                                         np.array([[-yaw_rate]]),
                                         np.array([np.atleast_2d(yaw_rate_std**2)]))
 
+          # When roll is invalid, update with 0 to keep filter reasonably constrained
           self.kf.predict_and_observe(t,
                                       ObservationKind.ROAD_ROLL,
                                       np.array([[self.roll]]),
@@ -80,6 +81,7 @@ class ParamsLearner:
       self.speed = msg.vEgo
 
       in_linear_region = abs(self.steering_angle) < 45 or not self.steering_pressed
+      # TODO: better to always update paramslearner
       self.active = self.speed > 5 and in_linear_region
 
       if self.active:
