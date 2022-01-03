@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import Dict, Union, Callable, List, Optional
+from typing import Dict, Union, Callable, Set, List, Optional
 
 from cereal import log, car
 import cereal.messaging as messaging
@@ -42,12 +42,16 @@ EVENT_NAME = {v: k for k, v in EventName.schema.enumerants.items()}
 
 class Events:
   def __init__(self):
-    self.events: List[int] = []
-    self.static_events: List[int] = []
-    self.events_prev = dict.fromkeys(EVENTS.keys(), 0)
+    self.events: Set[int] = set()
+    self.static_events: Set[int] = set()
+    self.frames = dict.fromkeys(EVENTS.keys(), -1)
+    self.frame = 0
+
+    # fast lookup
+    self._event_types = {k: set(v.keys()) for k, v in EVENTS.items()}
 
   @property
-  def names(self) -> List[int]:
+  def names(self) -> Set[int]:
     return self.events
 
   def __len__(self) -> int:
@@ -55,16 +59,17 @@ class Events:
 
   def add(self, event_name: int, static: bool=False) -> None:
     if static:
-      self.static_events.append(event_name)
-    self.events.append(event_name)
+      self.static_events.add(event_name)
+    self.events.add(event_name)
+    self.frames[event_name] = self.frame
 
   def clear(self) -> None:
-    self.events_prev = {k: (v + 1 if k in self.events else 0) for k, v in self.events_prev.items()}
+    self.frame += 1
     self.events = self.static_events.copy()
 
   def any(self, event_type: str) -> bool:
     for e in self.events:
-      if event_type in EVENTS.get(e, {}).keys():
+      if event_type in self._event_types[e]:
         return True
     return False
 
@@ -81,7 +86,7 @@ class Events:
           if not isinstance(alert, Alert):
             alert = alert(*callback_args)
 
-          if DT_CTRL * (self.events_prev[e] + 1) >= alert.creation_delay:
+          if DT_CTRL * (self.frames[e] + 1) >= alert.creation_delay:
             alert.alert_type = f"{EVENT_NAME[e]}/{et}"
             alert.event_type = et
             ret.append(alert)
@@ -89,7 +94,7 @@ class Events:
 
   def add_from_msg(self, events):
     for e in events:
-      self.events.append(e.name.raw)
+      self.add(e.name.raw)
 
   def to_msg(self):
     ret = []

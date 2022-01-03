@@ -33,6 +33,8 @@ class CarInterfaceBase(ABC):
     self.low_speed_alert = False
     self.silent_steer_warning = True
 
+    self._events = Events()
+
     if CarState is not None:
       self.CS = CarState(CP)
       self.cp = self.CS.get_can_parser(CP)
@@ -109,34 +111,34 @@ class CarInterfaceBase(ABC):
   def apply(self, c: car.CarControl) -> Tuple[car.CarControl.Actuators, List[bytes]]:
     pass
 
-  def create_common_events(self, cs_out, extra_gears=None, gas_resume_speed=-1, pcm_enable=True):
-    events = Events()
+  def create_common_events(self, cs_out, extra_gears=None, gas_resume_speed=-1, pcm_enable=True) -> Events:
+    self._events.clear()
 
     if cs_out.doorOpen:
-      events.add(EventName.doorOpen)
+      self._events.add(EventName.doorOpen)
     if cs_out.seatbeltUnlatched:
-      events.add(EventName.seatbeltNotLatched)
+      self._events.add(EventName.seatbeltNotLatched)
     if cs_out.gearShifter != GearShifter.drive and (extra_gears is None or
        cs_out.gearShifter not in extra_gears):
-      events.add(EventName.wrongGear)
+      self._events.add(EventName.wrongGear)
     if cs_out.gearShifter == GearShifter.reverse:
-      events.add(EventName.reverseGear)
+      self._events.add(EventName.reverseGear)
     if not cs_out.cruiseState.available:
-      events.add(EventName.wrongCarMode)
+      self._events.add(EventName.wrongCarMode)
     if cs_out.espDisabled:
-      events.add(EventName.espDisabled)
+      self._events.add(EventName.espDisabled)
     if cs_out.gasPressed:
-      events.add(EventName.gasPressed)
+      self._events.add(EventName.gasPressed)
     if cs_out.stockFcw:
-      events.add(EventName.stockFcw)
+      self._events.add(EventName.stockFcw)
     if cs_out.stockAeb:
-      events.add(EventName.stockAeb)
+      self._events.add(EventName.stockAeb)
     if cs_out.vEgo > MAX_CTRL_SPEED:
-      events.add(EventName.speedTooHigh)
+      self._events.add(EventName.speedTooHigh)
     if cs_out.cruiseState.nonAdaptive:
-      events.add(EventName.wrongCruiseMode)
+      self._events.add(EventName.wrongCruiseMode)
     if cs_out.brakeHoldActive and self.CP.openpilotLongitudinalControl:
-      events.add(EventName.brakeHold)
+      self._events.add(EventName.brakeHold)
 
 
     # Handle permanent and temporary steering faults
@@ -145,29 +147,29 @@ class CarInterfaceBase(ABC):
       # if the user overrode recently, show a less harsh alert
       if self.silent_steer_warning or cs_out.standstill or self.steering_unpressed < int(1.5 / DT_CTRL):
         self.silent_steer_warning = True
-        events.add(EventName.steerTempUnavailableSilent)
+        self._events.add(EventName.steerTempUnavailableSilent)
       else:
-        events.add(EventName.steerTempUnavailable)
+        self._events.add(EventName.steerTempUnavailable)
     else:
       self.silent_steer_warning = False
     if cs_out.steerError:
-      events.add(EventName.steerUnavailable)
+      self._events.add(EventName.steerUnavailable)
 
     # Disable on rising edge of gas or brake. Also disable on brake when speed > 0.
     # Optionally allow to press gas at zero speed to resume.
     # e.g. Chrysler does not spam the resume button yet, so resuming with gas is handy. FIXME!
     if (cs_out.gasPressed and (not self.CS.out.gasPressed) and cs_out.vEgo > gas_resume_speed) or \
        (cs_out.brakePressed and (not self.CS.out.brakePressed or not cs_out.standstill)):
-      events.add(EventName.pedalPressed)
+      self._events.add(EventName.pedalPressed)
 
     # we engage when pcm is active (rising edge)
     if pcm_enable:
       if cs_out.cruiseState.enabled and not self.CS.out.cruiseState.enabled:
-        events.add(EventName.pcmEnable)
+        self._events.add(EventName.pcmEnable)
       elif not cs_out.cruiseState.enabled:
-        events.add(EventName.pcmDisable)
+        self._events.add(EventName.pcmDisable)
 
-    return events
+    return self._events
 
 
 class RadarInterfaceBase(ABC):
