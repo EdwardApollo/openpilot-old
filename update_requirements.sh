@@ -3,11 +3,19 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 cd $DIR
 
-if ! command -v "pyenv" > /dev/null 2>&1; then
-  echo "installing pyenv..."
-  curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
-  export PATH=$HOME/.pyenv/bin:$HOME/.pyenv/shims:$PATH
+RC_FILE="${HOME}/.$(basename ${SHELL})rc"
+if command -v "pyenv" > /dev/null 2>&1; then
+  echo -e "\n. ~/.pyenvrc" >> $RC_FILE
+  cat <<EOF > "${HOME}/.pyenvrc"
+if [ -z "\$PYENV_ROOT" ]; then
+  export PATH=\$HOME/.pyenv/bin:\$HOME/.pyenv/shims:\$PATH
+  export PYENV_ROOT="\$HOME/.pyenv"
+  eval "\$(pyenv init -)"
+  eval "\$(pyenv virtualenv-init -)"
 fi
+EOF
+fi
+source $RC_FILE
 
 export MAKEFLAGS="-j$(nproc)"
 
