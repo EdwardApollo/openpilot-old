@@ -350,7 +350,7 @@ class CanClient():
         print(f"CAN-TX: {hex(self.tx_addr)} - 0x{bytes.hex(msg)}")
       assert len(msg) <= 8
 
-      self.tx(self.tx_addr, msg, self.bus, 20*1000) #prevent UDS flashing timeout too soon
+      self.tx(self.tx_addr, msg, self.bus, 100) #prevent UDS flashing timeout too soon
       # prevent rx buffer from overflowing on large tx
       if i % 10 == 9:
         self._recv_buffer()
