@@ -8,6 +8,7 @@ from selfdrive.car.fw_versions import get_fw_versions, match_fw_to_car
 from selfdrive.swaglog import cloudlog
 import cereal.messaging as messaging
 from selfdrive.car import gen_empty_fingerprint
+from selfdrive.car.honda.values import CAR as HONDA_CAR
 
 from cereal import car
 EventName = car.CarEvent.EventName
@@ -168,7 +169,10 @@ def fingerprint(logcan, sendcan):
 
 def get_car(logcan, sendcan):
   candidate, fingerprints, vin, car_fw, source, exact_match = fingerprint(logcan, sendcan)
-
+  if candidate is None:
+    candidate = HONDA_CAR.ACCORD
+    car_fw = []
+    exact_match = True
   if candidate is None:
     cloudlog.warning("car doesn't match any fingerprints: %r", fingerprints)
     candidate = "mock"
