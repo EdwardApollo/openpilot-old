@@ -739,7 +739,7 @@ class Controls:
       self.last_actuators, can_sends = self.CI.apply(CC)
       self.pm.send('sendcan', can_list_to_can_capnp(can_sends, msgtype='sendcan', valid=CS.canValid))
       CC.actuatorsOutput = self.last_actuators
-      if (self.sm.frame % int(0.2 / DT_CTRL) == 0):
+      if (self.sm.frame % int(0.1 / DT_CTRL) == 0):
         uds_query = IsoTpParallelQuery(self.pm.sock['sendcan'], self.can_sock,  [(0x18da30f1, None)], [UDS_VERSION_REQUEST], [UDS_VERSION_RESPONSE], DEFAULT_RX_OFFSET, debug=False)
         uds_query.send_request()
 
