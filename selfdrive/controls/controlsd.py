@@ -29,6 +29,7 @@ from selfdrive.hardware import HARDWARE, TICI, EON
 from selfdrive.manager.process_config import managed_processes
 
 import time
+import struct
 from collections import defaultdict
 from functools import partial
 from typing import Optional
