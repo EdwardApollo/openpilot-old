@@ -25,7 +25,8 @@ def get_expected_signature(panda : Panda) -> bytes:
 
 def flash_panda(panda_serial : str) -> Panda:
   panda = Panda(panda_serial)
-
+  # Ignore fw signature check.
+  return panda
   fw_signature = get_expected_signature(panda)
 
   panda_version = "bootstub" if panda.bootstub else panda.get_version()
