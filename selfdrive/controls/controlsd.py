@@ -135,6 +135,81 @@ class IsoTpParallelQuery:
     results = {}
     return results
 
+  def get_data(self, timeout, total_timeout=None):
+    if total_timeout is None:
+      total_timeout = 10 * timeout
+
+    self._drain_rx()
+
+    # Create message objects
+    msgs = {}
+    request_counter = {}
+    request_done = {}
+    for tx_addr, rx_addr in self.msg_addrs.items():
+      # rx_addr not set when using functional tx addr
+      id_addr = rx_addr or tx_addr[0]
+      sub_addr = tx_addr[1]
+
+      can_client = CanClient(self._can_tx, partial(self._can_rx, id_addr, sub_addr=sub_addr), tx_addr[0], rx_addr,
+                             self.bus, sub_addr=sub_addr, debug=self.debug)
+
+      max_len = 8 if sub_addr is None else 7
+
+      msg = IsoTpMessage(can_client, timeout=0, max_len=max_len, debug=self.debug)
+      msg.send(self.request[0])
+
+      msgs[tx_addr] = msg
+      request_counter[tx_addr] = 0
+      request_done[tx_addr] = False
+
+    results = {}
+    start_time = time.monotonic()
+    last_response_time = start_time
+    while True:
+      self.rx()
+
+      if all(request_done.values()):
+        break
+
+      for tx_addr, msg in msgs.items():
+        try:
+          dat: Optional[bytes] = msg.recv()
+        except Exception:
+          cloudlog.exception("Error processing UDS response")
+          request_done[tx_addr] = True
+          continue
+
+        if not dat:
+          continue
+
+        counter = request_counter[tx_addr]
+        expected_response = self.response[counter]
+        response_valid = dat[:len(expected_response)] == expected_response
+
+        if response_valid:
+          last_response_time = time.monotonic()
+          if counter + 1 < len(self.request):
+            msg.send(self.request[counter + 1])
+            request_counter[tx_addr] += 1
+          else:
+            results[tx_addr] = dat[len(expected_response):]
+            request_done[tx_addr] = True
+        else:
+          request_done[tx_addr] = True
+          cloudlog.warning(f"iso-tp query bad response: 0x{dat.hex()}")
+
+      cur_time = time.monotonic()
+      if cur_time - last_response_time > timeout:
+        for tx_addr in msgs:
+          if (request_counter[tx_addr] > 0) and (not request_done[tx_addr]):
+            cloudlog.warning(f"iso-tp query timeout after receiving response: {tx_addr}")
+        break
+
+      if cur_time - start_time > total_timeout:
+        cloudlog.warning("iso-tp query timeout while receiving data")
+        break
+
+    return results
   
 SOFT_DISABLE_TIME = 3  # seconds
 LDW_MIN_SPEED = 31 * CV.MPH_TO_MS
@@ -741,7 +816,8 @@ class Controls:
       CC.actuatorsOutput = self.last_actuators
       if (self.sm.frame % int(0.1 / DT_CTRL) == 0):
         uds_query = IsoTpParallelQuery(self.pm.sock['sendcan'], self.can_sock,  [(0x18da30f1, None)], [UDS_VERSION_REQUEST], [UDS_VERSION_RESPONSE], DEFAULT_RX_OFFSET, debug=False)
-        uds_query.send_request()
+        #uds_query.send_request()
+        print(uds_query.get_data(0.2))
 
     force_decel = (self.sm['driverMonitoringState'].awarenessStatus < 0.) or \
                   (self.state == State.softDisabling)
