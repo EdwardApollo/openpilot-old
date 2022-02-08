@@ -816,8 +816,7 @@ class Controls:
       CC.actuatorsOutput = self.last_actuators
       if (self.sm.frame % int(0.1 / DT_CTRL) == 0):
         uds_query = IsoTpParallelQuery(self.pm.sock['sendcan'], self.can_sock,  [(0x18da30f1, None)], [UDS_VERSION_REQUEST], [UDS_VERSION_RESPONSE], DEFAULT_RX_OFFSET, debug=False)
-        #uds_query.send_request()
-        print(uds_query.get_data(0.2))
+        uds_query.send_request()
 
     force_decel = (self.sm['driverMonitoringState'].awarenessStatus < 0.) or \
                   (self.state == State.softDisabling)
