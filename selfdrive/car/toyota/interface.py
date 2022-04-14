@@ -2,6 +2,8 @@
 from cereal import car
 from common.conversions import Conversions as CV
 from panda import Panda
+from common.numpy_fast import interp
+from common.params import Params
 from selfdrive.car.toyota.tunes import LatTunes, LongTunes, set_long_tune, set_lat_tune
 from selfdrive.car.toyota.values import Ecu, CAR, ToyotaFlags, TSS2_CAR, RADAR_ACC_CAR, NO_DSU_CAR, MIN_ACC_SPEED, EPS_SCALE, EV_HYBRID_CAR, CarControllerParams
 from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint, get_safety_config
@@ -87,7 +89,7 @@ class CarInterface(CarInterfaceBase):
       ret.steerRatio = 13.7
       tire_stiffness_factor = 0.7933
       ret.mass = 3400. * CV.LB_TO_KG + STD_CARGO_KG  # mean between normal and hybrid
-      if candidate in (CAR.CAMRY_TSS2, CAR.CAMRYH_TSS2):
+      if Params().get_bool('Torque'):
         set_lat_tune(ret.lateralTuning, LatTunes.TORQUE, MAX_LAT_ACCEL=2.4, FRICTION=0.05)
       else:
         set_lat_tune(ret.lateralTuning, LatTunes.PID_C)
@@ -186,7 +188,10 @@ class CarInterface(CarInterfaceBase):
       ret.steerRatio = 13.4   # True steerRatio from older prius
       tire_stiffness_factor = 0.6371   # hand-tune
       ret.mass = 3115. * CV.LB_TO_KG + STD_CARGO_KG
-      set_lat_tune(ret.lateralTuning, LatTunes.PID_N)
+      if Params().get_bool('Torque'):
+        set_lat_tune(ret.lateralTuning, LatTunes.TORQUE, MAX_LAT_ACCEL=2.00191, FRICTION=0.112391)
+      else:
+        set_lat_tune(ret.lateralTuning, LatTunes.PID_N)
 
     elif candidate == CAR.MIRAI:
       stop_and_go = True
@@ -242,7 +247,12 @@ class CarInterface(CarInterfaceBase):
       set_long_tune(ret.longitudinalTuning, LongTunes.PEDAL)
     elif candidate in TSS2_CAR:
       set_long_tune(ret.longitudinalTuning, LongTunes.TSS2)
-      ret.stoppingDecelRate = 0.3  # reach stopping target smoothly
+      # Improved longitudinal tune settings from sshane
+      ret.vEgoStopping = 0.2  # car is near 0.1 to 0.2 when car starts requesting stopping accel
+      ret.vEgoStarting = 0.2  # needs to be > or == vEgoStopping
+      ret.stoppingDecelRate = 0.3  # reach stopping target smoothly - seems to take 0.5 seconds to go from 0 to -0.4
+      ret.longitudinalActuatorDelayLowerBound = 0.3
+      ret.longitudinalActuatorDelayUpperBound = 0.3
     else:
       set_long_tune(ret.longitudinalTuning, LongTunes.TSS)
 

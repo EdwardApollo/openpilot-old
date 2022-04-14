@@ -71,6 +71,12 @@ TogglesPanel::TogglesPanel(SettingsWindow *parent) : ListWidget(parent) {
       "When enabled, pressing the accelerator pedal will disengage openpilot.",
       "../assets/offroad/icon_disengage_on_accelerator.svg",
     },
+    {
+      "Torque",
+      "Use Torque Tune",
+      "Use Torque tuning values. For select models only..",
+      "../assets/offroad/icon_openpilot.png",
+    },
 #ifdef ENABLE_MAPS
     {
       "NavSettingTime24h",

@@ -248,10 +248,10 @@ def calibration_incomplete_alert(CP: car.CarParams, sm: messaging.SubMaster, met
 def no_gps_alert(CP: car.CarParams, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
   gps_integrated = sm['peripheralState'].pandaType in (log.PandaState.PandaType.uno, log.PandaState.PandaType.dos)
   return Alert(
-    "Poor GPS reception",
-    "Hardware malfunctioning if sky is visible" if gps_integrated else "Check GPS antenna placement",
-    AlertStatus.normal, AlertSize.mid,
-    Priority.LOWER, VisualAlert.none, AudibleAlert.none, .2, creation_delay=300.)
+    "",
+    "If sky is visible, contact support" if gps_integrated else "",
+    AlertStatus.normal, AlertSize.none,
+    Priority.LOWER, VisualAlert.none, AudibleAlert.none, 0., 0., .2)
 
 # *** debug alerts ***
 
@@ -511,7 +511,7 @@ EVENTS: Dict[int, Dict[str, Union[Alert, AlertCallbackType]]] = {
       "Take Control",
       "Turn Exceeds Steering Limit",
       AlertStatus.userPrompt, AlertSize.mid,
-      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.promptRepeat, 1.),
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.none, 1., 1., 1.),
   },
 
   # Thrown when the fan is driven at >50% but is not rotating
