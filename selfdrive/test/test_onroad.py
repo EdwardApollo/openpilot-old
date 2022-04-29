@@ -22,8 +22,9 @@ from tools.lib.logreader import LogReader
 
 # Baseline CPU usage by process
 PROCS = {
-  "selfdrive.controls.controlsd": 55.0,
-  "./loggerd": 45.0,
+  "selfdrive.controls.controlsd": 31.0,
+  "./loggerd": 70.0,
+  "./camerad": 26.0,
   "./locationd": 9.1,
   "selfdrive.controls.plannerd": 11.7,
   "./_ui": 18.4,
