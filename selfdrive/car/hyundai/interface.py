@@ -2,6 +2,7 @@
 from cereal import car
 from panda import Panda
 from common.conversions import Conversions as CV
+from common.params import Params
 from selfdrive.car.hyundai.values import CAR, DBC, EV_CAR, HYBRID_CAR, LEGACY_SAFETY_MODE_CAR, Buttons, CarControllerParams
 from selfdrive.car.hyundai.radar_interface import RADAR_START_ADDR
 from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint, get_safety_config
@@ -57,31 +58,79 @@ class CarInterface(CarInterfaceBase):
       # Values from optimizer
       ret.steerRatio = 16.55  # 13.8 is spec end-to-end
       tire_stiffness_factor = 0.82
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[9., 22.], [9., 22.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.2, 0.35], [0.05, 0.09]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[9., 22.], [9., 22.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.2, 0.35], [0.05, 0.09]]
+    
     elif candidate in (CAR.SONATA, CAR.SONATA_HYBRID):
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 1513. + STD_CARGO_KG
       ret.wheelbase = 2.84
       ret.steerRatio = 13.27 * 1.15   # 15% higher at the center seems reasonable
       tire_stiffness_factor = 0.65
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+    
     elif candidate == CAR.SONATA_LF:
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 4497. * CV.LB_TO_KG
       ret.wheelbase = 2.804
       ret.steerRatio = 13.27 * 1.15   # 15% higher at the center seems reasonable
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+    
     elif candidate == CAR.PALISADE:
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 1999. + STD_CARGO_KG
       ret.wheelbase = 2.90
       ret.steerRatio = 15.6 * 1.15
       tire_stiffness_factor = 0.63
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.3], [0.05]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.3], [0.05]]
+    
     elif candidate in (CAR.ELANTRA, CAR.ELANTRA_GT_I30):
       ret.lateralTuning.pid.kf = 0.00006
       ret.mass = 1275. + STD_CARGO_KG
@@ -91,22 +140,47 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
       ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
       ret.minSteerSpeed = 32 * CV.MPH_TO_MS
+    
     elif candidate == CAR.ELANTRA_2021:
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = (2800. * CV.LB_TO_KG) + STD_CARGO_KG
       ret.wheelbase = 2.72
       ret.steerRatio = 12.9
       tire_stiffness_factor = 0.65
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+    
     elif candidate == CAR.ELANTRA_HEV_2021:
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = (3017. * CV.LB_TO_KG) + STD_CARGO_KG
       ret.wheelbase = 2.72
       ret.steerRatio = 12.9
       tire_stiffness_factor = 0.65
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+    
     elif candidate == CAR.HYUNDAI_GENESIS:
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 2060. + STD_CARGO_KG
@@ -122,24 +196,49 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.indi.actuatorEffectivenessBP = [0.]
       ret.lateralTuning.indi.actuatorEffectivenessV = [2.3]
       ret.minSteerSpeed = 60 * CV.KPH_TO_MS
+    
     elif candidate in (CAR.KONA, CAR.KONA_EV, CAR.KONA_HEV):
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = {CAR.KONA_EV: 1685., CAR.KONA_HEV: 1425.}.get(candidate, 1275.) + STD_CARGO_KG
       ret.wheelbase = 2.6
       ret.steerRatio = 13.42  # Spec
       tire_stiffness_factor = 0.385
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+    
     elif candidate in (CAR.IONIQ, CAR.IONIQ_EV_LTD, CAR.IONIQ_EV_2020, CAR.IONIQ_PHEV, CAR.IONIQ_HEV_2022):
       ret.lateralTuning.pid.kf = 0.00006
       ret.mass = 1490. + STD_CARGO_KG  # weight per hyundai site https://www.hyundaiusa.com/ioniq-electric/specifications.aspx
       ret.wheelbase = 2.7
       ret.steerRatio = 13.73  # Spec
       tire_stiffness_factor = 0.385
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
       if candidate not in (CAR.IONIQ_EV_2020, CAR.IONIQ_PHEV, CAR.IONIQ_HEV_2022):
         ret.minSteerSpeed = 32 * CV.MPH_TO_MS
+    
     elif candidate == CAR.IONIQ_PHEV_2019:
       ret.mass = 1550. + STD_CARGO_KG  # weight per hyundai site https://www.hyundaiusa.com/us/en/vehicles/2019-ioniq-plug-in-hybrid/compare-specs
       ret.wheelbase = 2.7
@@ -154,14 +253,27 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.indi.actuatorEffectivenessBP = [0.]
       ret.lateralTuning.indi.actuatorEffectivenessV = [1.8]
       ret.minSteerSpeed = 32 * CV.MPH_TO_MS
+    
     elif candidate == CAR.VELOSTER:
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 3558. * CV.LB_TO_KG
       ret.wheelbase = 2.80
       ret.steerRatio = 13.75 * 1.15
       tire_stiffness_factor = 0.5
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+    
     elif candidate == CAR.TUCSON_DIESEL_2019:
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 3633. * CV.LB_TO_KG
@@ -177,18 +289,42 @@ class CarInterface(CarInterfaceBase):
       ret.mass = 1985. + STD_CARGO_KG
       ret.wheelbase = 2.78
       ret.steerRatio = 14.4 * 1.1   # 10% higher at the center seems reasonable
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+   
     elif candidate in (CAR.KIA_NIRO_EV, CAR.KIA_NIRO_HEV, CAR.KIA_NIRO_HEV_2021):
       ret.lateralTuning.pid.kf = 0.00006
       ret.mass = 1737. + STD_CARGO_KG
       ret.wheelbase = 2.7
       ret.steerRatio = 13.9 if CAR.KIA_NIRO_HEV_2021 else 13.73  # Spec
       tire_stiffness_factor = 0.385
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
       if candidate == CAR.KIA_NIRO_HEV:
         ret.minSteerSpeed = 32 * CV.MPH_TO_MS
+    
     elif candidate == CAR.KIA_SELTOS:
       ret.mass = 1337. + STD_CARGO_KG
       ret.wheelbase = 2.63
@@ -203,21 +339,46 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.indi.timeConstantV = [1.4]
       ret.lateralTuning.indi.actuatorEffectivenessBP = [0.]
       ret.lateralTuning.indi.actuatorEffectivenessV = [1.8]
+    
     elif candidate in (CAR.KIA_OPTIMA, CAR.KIA_OPTIMA_H):
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 3558. * CV.LB_TO_KG
       ret.wheelbase = 2.80
       ret.steerRatio = 13.75
       tire_stiffness_factor = 0.5
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+    
     elif candidate == CAR.KIA_STINGER:
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 1825. + STD_CARGO_KG
       ret.wheelbase = 2.78
       ret.steerRatio = 14.4 * 1.15   # 15% higher at the center seems reasonable
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+    
     elif candidate == CAR.KIA_FORTE:
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 3558. * CV.LB_TO_KG
@@ -226,6 +387,7 @@ class CarInterface(CarInterfaceBase):
       tire_stiffness_factor = 0.5
       ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
       ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+    
     elif candidate == CAR.KIA_CEED:
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 1450. + STD_CARGO_KG
@@ -235,14 +397,26 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.pid.kf = 0.00005
       ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
       ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+    
     elif candidate == CAR.KIA_K5_2021:
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 3228. * CV.LB_TO_KG
       ret.wheelbase = 2.85
       ret.steerRatio = 13.27  # 2021 Kia K5 Steering Ratio (all trims)
       tire_stiffness_factor = 0.5
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
 
     # Genesis
     elif candidate == CAR.GENESIS_G70:
@@ -259,6 +433,7 @@ class CarInterface(CarInterfaceBase):
       ret.mass = 1640.0 + STD_CARGO_KG
       ret.wheelbase = 2.84
       ret.steerRatio = 13.56
+    
     elif candidate == CAR.GENESIS_G70_2020:
       ret.lateralTuning.pid.kf = 0.
       ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
@@ -266,19 +441,43 @@ class CarInterface(CarInterfaceBase):
       ret.mass = 3673.0 * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 2.83
       ret.steerRatio = 12.9
+    
     elif candidate == CAR.GENESIS_G80:
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 2060. + STD_CARGO_KG
       ret.wheelbase = 3.01
       ret.steerRatio = 16.5
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.16], [0.01]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.16], [0.01]]
+    
     elif candidate == CAR.GENESIS_G90:
       ret.mass = 2200
       ret.wheelbase = 3.15
       ret.steerRatio = 12.069
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.16], [0.01]]
+      if Params().get_bool('Torque'):
+        max_torque = 2.0
+        friction = 0.05
+
+        ret.lateralTuning.init('torque')
+        ret.lateralTuning.torque.useSteeringAngle = True
+        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.friction = friction
+      else:
+        ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.16], [0.01]]
 
     # these cars require a special panda safety mode due to missing counters and checksums in the messages
     if candidate in LEGACY_SAFETY_MODE_CAR:
