@@ -211,7 +211,7 @@ void loggerd_thread() {
 
   LoggerdState s;
   // init logger
-  logger_init(&s.logger, "rlog", true);
+  logger_init(&s.logger, true);
   logger_rotate(&s);
   Params().put("CurrentRoute", s.logger.route_name);
 
