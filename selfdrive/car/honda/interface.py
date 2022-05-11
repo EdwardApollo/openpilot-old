@@ -99,7 +99,7 @@ class CarInterface(CarInterfaceBase):
           ret.lateralTuning.torque.useSteeringAngle = True
           ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
           ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
-          ret.lateralTuning.torque.ki = 0.05 / MAX_LAT_ACCEL
+          ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
           ret.lateralTuning.torque.friction = friction
         else:
           ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.3], [0.1]]
@@ -124,7 +124,7 @@ class CarInterface(CarInterfaceBase):
           ret.lateralTuning.torque.useSteeringAngle = True
           ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
           ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
-          ret.lateralTuning.torque.ki = 0.05 / MAX_LAT_ACCEL
+          ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
           ret.lateralTuning.torque.friction = friction
         else:
           ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.36], [0.108]] #minus 10% from 0.4, 0.12
@@ -148,7 +148,7 @@ class CarInterface(CarInterfaceBase):
         ret.lateralTuning.torque.useSteeringAngle = True
         ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
         ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
-        ret.lateralTuning.torque.ki = 0.05 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
         ret.lateralTuning.torque.friction = friction
       else:
         ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.6], [0.18]]
@@ -195,7 +195,7 @@ class CarInterface(CarInterfaceBase):
           ret.lateralTuning.torque.useSteeringAngle = True
           ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
           ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
-          ret.lateralTuning.torque.ki = 0.05 / MAX_LAT_ACCEL
+          ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
           ret.lateralTuning.torque.friction = friction
         else:
           ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.21], [0.07]]
@@ -273,7 +273,7 @@ class CarInterface(CarInterfaceBase):
         ret.lateralTuning.torque.useSteeringAngle = True
         ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
         ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
-        ret.lateralTuning.torque.ki = 0.05 / MAX_LAT_ACCEL
+        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
         ret.lateralTuning.torque.friction = friction
       else:
         ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.2], [0.06]]
