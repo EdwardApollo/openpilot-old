@@ -189,7 +189,7 @@ class CarInterface(CarInterfaceBase):
       tire_stiffness_factor = 0.6371   # hand-tune
       ret.mass = 3115. * CV.LB_TO_KG + STD_CARGO_KG
       if Params().get_bool('Torque'):
-        set_lat_tune(ret.lateralTuning, LatTunes.TORQUE, MAX_LAT_ACCEL=2.00191, FRICTION=0.112391)
+        set_lat_tune(ret.lateralTuning, LatTunes.TORQUE, MAX_LAT_ACCEL=2.009141, FRICTION=0.112391)
       else:
         set_lat_tune(ret.lateralTuning, LatTunes.PID_N)
 
