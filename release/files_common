@@ -205,8 +205,13 @@ selfdrive/hardware/eon/neos.py
 selfdrive/hardware/eon/neos.json
 selfdrive/hardware/eon/updater
 selfdrive/hardware/tici/__init__.py
+selfdrive/hardware/tici/hardware.h
 selfdrive/hardware/tici/hardware.py
+selfdrive/hardware/tici/pins.py
+selfdrive/hardware/tici/agnos.py
+selfdrive/hardware/tici/agnos.json
 selfdrive/hardware/tici/amplifier.py
+selfdrive/hardware/tici/updater
 selfdrive/hardware/tici/iwlist.py
 selfdrive/hardware/pc/__init__.py
 selfdrive/hardware/pc/hardware.py
