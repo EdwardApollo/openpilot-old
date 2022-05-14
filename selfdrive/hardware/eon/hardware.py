@@ -33,7 +33,7 @@ def service_call(call: List[str]) -> Union[bytes, None]:
 
 def parse_service_call_unpack(r, fmt) -> Union[bytes, None]:
   try:
-    return struct.unpack(fmt, r)[0]
+    return bytes(struct.unpack(fmt, r)[0],fmt)
   except Exception:
     return None
 
