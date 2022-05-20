@@ -188,8 +188,8 @@ class CarInterface(CarInterfaceBase):
         ret.lateralParams.torqueBP, ret.lateralParams.torqueV = [[0, 2560, 10000], [0, 2560, 3840]]
         # Use LQR tune if param is set
         if Params().get_bool('Torque'):
-          max_torque = 1.7
-          friction = 0.087112
+          max_torque = 3.3
+          friction = 0.046
 
           ret.lateralTuning.init('torque')
           ret.lateralTuning.torque.useSteeringAngle = True
