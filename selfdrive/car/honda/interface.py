@@ -132,27 +132,28 @@ class CarInterface(CarInterfaceBase):
         ret.lateralParams.torqueBP, ret.lateralParams.torqueV = [[0, 4096], [0, 4096]]  # TODO: determine if there is a dead zone at the top end
         ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.8], [0.24]]
       tire_stiffness_factor = 1.
-
-    elif candidate in (CAR.ACCORD, CAR.ACCORDH):
+      
+     elif candidate in (CAR.ACCORD, CAR.ACCORDH):
       stop_and_go = True
       ret.mass = 3279. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 2.83
       ret.centerToFront = ret.wheelbase * 0.39
       ret.steerRatio = 16.33  # 11.82 is spec end-to-end
       ret.lateralParams.torqueBP, ret.lateralParams.torqueV = [[0, 4096], [0, 4096]]  # TODO: determine if there is a dead zone at the top end
+      tire_stiffness_factor = 0.8467
+      
       if Params().get_bool('Torque'):
-        max_torque = 1.7
-        friction = 0.087112
+        max_torque = 3.32 if eps_modified else 1.66
+        friction = 0.05 if eps_modified else 0.1
 
-        ret.lateralTuning.init('torque')
-        ret.lateralTuning.torque.useSteeringAngle = True
-        ret.lateralTuning.torque.kp = 2.0 / MAX_LAT_ACCEL
-        ret.lateralTuning.torque.kf = 1.0 / MAX_LAT_ACCEL
-        ret.lateralTuning.torque.ki = 0.5 / MAX_LAT_ACCEL
-        ret.lateralTuning.torque.friction = friction
+      ret.lateralTuning.init('torque')
+      ret.lateralTuning.torque.useSteeringAngle = True
+      ret.lateralTuning.torque.kp = 2.0 / max_torque
+      ret.lateralTuning.torque.kf = 1.0 / max_torque
+      ret.lateralTuning.torque.ki = 0.5 / max_torque
+      ret.lateralTuning.torque.friction = friction
       else:
         ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.6], [0.18]]
-      tire_stiffness_factor = 0.8467
         
     elif candidate == CAR.ACURA_ILX:
       stop_and_go = False
